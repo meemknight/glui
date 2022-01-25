@@ -458,7 +458,7 @@ namespace gl2d
 			const stbtt_aligned_quad  q = internal::fontGetGlyphQuad(*this, c);
 			const float               m = q.y1 - q.y0;
 
-			if (m > max_height)
+			if (m > max_height && m < 10000)
 			{
 				max_height = m;
 			}
@@ -1121,6 +1121,9 @@ namespace gl2d
 		float maxPos = 0;
 		float maxPosY = 0;
 		float bonusY = 0;
+		float currentMaxH = 0;
+		bool newLine = 0;
+		float firstLineY = 0;
 
 		for (int i = 0; i < text_length; i++)
 		{
@@ -1129,7 +1132,7 @@ namespace gl2d
 				rectangle.x = position.x;
 				linePositionY += (font.max_height + line_space) * size;
 				bonusY += (font.max_height + line_space) * size;
-				maxPosY = 0;
+				newLine = true;
 			}
 			else if (text[i] == '\t')
 			{
@@ -1159,22 +1162,32 @@ namespace gl2d
 				rectangle.w *= size;
 
 				rectangle.y = linePositionY + quad.y0 * size;
+				//rectangle.y = quad.y0 * size;
 
 				rectangle.x += rectangle.z + spacing * size;
 
-				maxPosY = std::max(maxPosY, rectangle.y);
+				if (!newLine) 
+				{
+					maxPosY = std::max(maxPosY, rectangle.y);
+					firstLineY = std::max(firstLineY, rectangle.w);
+				}
 				maxPos = std::max(maxPos, rectangle.x);
 			}
 		}
 
 		maxPos = std::max(maxPos, rectangle.x);
-		maxPosY = std::max(maxPosY, rectangle.y);
+		if (!newLine)
+		{
+			maxPosY = std::max(maxPosY, rectangle.y);
+		}
+
 
 		float paddX = maxPos;
 
-		float paddY = maxPosY;
+		float paddY = firstLineY;
+		//float paddY = font.max_height * size;
 
-		paddY += font.max_height * size + bonusY;
+		paddY += bonusY;
 
 		return glm::vec2{paddX, paddY};
 
@@ -1197,62 +1210,31 @@ namespace gl2d
 		rectangle.x = position.x;
 		float linePositionY = position.y;
 
+		const float lineyAdvance = (font.max_height + line_space) * size;
+
 		if (showInCenter)
 		{
-			//This is the y position we render at because it advances when we encounter newlines
-
-			float maxPos = 0;
-			float maxPosY = 0;
-
+			//determine first line height
+			float maxH = 0;
 			for (int i = 0; i < text_length; i++)
 			{
 				if (text[i] == '\n')
 				{
-					rectangle.x = position.x;
-					linePositionY += (font.max_height + line_space) * size;
-				}
-				else if (text[i] == '\t')
-				{
-					const stbtt_aligned_quad quad = internal::fontGetGlyphQuad
-					(font, '_');
-					auto x = quad.x1 - quad.x0;
-
-					rectangle.x += x * size * 3 + spacing * size;
-				}
-				else if (text[i] == ' ')
-				{
-					const stbtt_aligned_quad quad = internal::fontGetGlyphQuad
-					(font, '_');
-					auto x = quad.x1 - quad.x0;
-
-					rectangle.x += x * size + spacing * size;
+					break;
 				}
 				else if (text[i] >= ' ' && text[i] <= '~')
 				{
 					const stbtt_aligned_quad quad = internal::fontGetGlyphQuad
 					(font, text[i]);
-
-					rectangle.z = quad.x1 - quad.x0;
 					rectangle.w = quad.y1 - quad.y0;
-
-					rectangle.z *= size;
 					rectangle.w *= size;
-
-					rectangle.y = linePositionY + quad.y0 * size;
-
-
-					rectangle.x += rectangle.z + spacing * size;
-					maxPos = std::max(maxPos, rectangle.x);
-					maxPosY = std::max(maxPosY, rectangle.y);
+					maxH = std::max(maxH, rectangle.w);
 				}
 			}
 
-			float padd = maxPos - position.x;
-			padd /= 2;
-			position.x -= padd;
-
-			float paddY = maxPosY - position.y;
-			position.y -= paddY;
+			auto s = getTextSize(text, font, size, spacing, line_space);
+			position.x -= s.x / 2.f;
+			position.y += -(s.y / 2.f) + maxH;
 		}
 
 		rectangle = {};
@@ -1266,7 +1248,7 @@ namespace gl2d
 			if (text[i] == '\n')
 			{
 				rectangle.x = position.x;
-				linePositionY += (font.max_height + line_space) * size;
+				linePositionY += lineyAdvance;
 			}
 			else if (text[i] == '\t')
 			{
@@ -1321,7 +1303,6 @@ namespace gl2d
 						glm::vec4{quad.s0, quad.t0, quad.s1, quad.t1});
 
 				}
-
 
 				rectangle.x += rectangle.z + spacing * size;
 			}

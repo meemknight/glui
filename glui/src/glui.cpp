@@ -52,6 +52,7 @@ namespace glui
 		gl2d::Rect transform = {};
 		gl2d::Color4f colors = Colors_White;
 		gl2d::Texture texture = {};
+		float fontSize = 0.f;
 		bool returnFromUpdate = 0;
 	};
 
@@ -75,7 +76,88 @@ namespace glui
 
 	std::unordered_map<std::string, Widget> widgets;
 
-	void renderFrame(gl2d::Renderer2D& renderer, glm::ivec2 mousePos, bool mouseClick, bool mouseHeld, bool mouseReleased, bool escapeReleased)
+	constexpr float pressDownSize = 0.04f;
+	constexpr float shadowSize = 0.2f;
+	constexpr float outlineSize = 0.02f;
+	constexpr float textFit  = 0.8f;
+	
+	//glm::vec4 getShadowPos(glm::vec4 transform)
+	//{
+	//	auto shadow = transform;
+	//	shadow.y += shadow.w * shadowDisplacement;
+	//	shadow.x -= shadow.z * shadowDisplacement;
+	//	return shadow;
+	//}
+
+	void splitTransforms(glm::vec4& down, glm::vec4& newTransform, glm::vec4 transform)
+	{
+		down = transform;
+		newTransform = transform;
+		float border = shadowSize * std::min(transform.w, transform.z);
+		down.w = border;
+		newTransform.w -= border;
+		down.y += newTransform.w;
+	}
+
+	glm::vec4 stepColorUp(glm::vec4 color, float perc)
+	{
+		glm::vec4 inversColor = glm::vec4(1, 1, 1, 1) - color;
+		return inversColor * perc + color;
+	}
+	glm::vec4 stepColorDown(glm::vec4 color, float perc)
+	{
+		color.r *= perc;
+		color.g *= perc;
+		color.b *= perc;
+		return color;
+	}
+
+	void renderFancyBox(gl2d::Renderer2D& renderer, glm::vec4 transform, glm::vec4 color, gl2d::Texture t, bool hovered, bool clicked)
+	{
+		float colorDim = 0.f;
+		if (hovered)
+		{
+			//colorDim += 0.2f;
+			if (clicked)
+			{
+				colorDim += 0.1f;
+			}
+		}
+
+		auto newColor = stepColorUp(color, colorDim);
+		auto lightColor = stepColorUp(newColor, 0.02);
+		auto outlineColor = stepColorUp(newColor, 0.3);
+		auto darkColor = stepColorDown(newColor, 0.5f);
+		auto darkerColor = stepColorDown(newColor, 0.25f);
+
+		glm::vec4 colorVector[4] = {darkColor, darkColor, lightColor, lightColor};
+
+		if (t.id == 0)
+		{
+			if (hovered)
+			{
+				float calculatedOutline = outlineSize * std::min(transform.w, transform.z);
+				renderer.renderRectangle(transform, outlineColor);
+				transform.x	+= calculatedOutline;
+				transform.y	+= calculatedOutline;
+				transform.z -= calculatedOutline * 2;
+				transform.w -= calculatedOutline * 2;
+			}
+
+			glm::vec4 middle = {};
+			glm::vec4 down = {};
+			splitTransforms(down, middle, transform);
+			renderer.renderRectangle(middle, colorVector);
+			renderer.renderRectangle(down, darkerColor);
+
+		}
+		else
+		{
+			renderer.renderRectangle(transform, {}, 0.f, t, newColor);
+		}
+	}
+
+	void renderFrame(gl2d::Renderer2D& renderer, gl2d::Font& font, glm::ivec2 mousePos, bool mouseClick, bool mouseHeld, bool mouseReleased, bool escapeReleased)
 	{
 
 		auto camera = renderer.currentCamera;
@@ -112,14 +194,17 @@ namespace glui
 			{
 				case widgetType::button:
 				{
-					float colorDim = 1.f;
-					
+					auto transformDrawn = widget.transform;
+					bool hovered = 0;
+					bool clicked = 0;
+
 					if (aabb(widget.transform, input.mousePos))
 					{
-						colorDim -= 0.2f;
+						hovered = true;
 						if (input.mouseHeld)
 						{
-							colorDim -= 0.2f;
+							clicked = true;
+							transformDrawn.y += transformDrawn.w * pressDownSize;
 						}
 					}
 
@@ -132,19 +217,21 @@ namespace glui
 						widget.returnFromUpdate = false;
 					}
 
-					auto newColor = widget.colors;
-					newColor.r *= colorDim;
-					newColor.g *= colorDim;
-					newColor.b *= colorDim;
+					renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
 
-					if (widget.texture.id == 0)
-					{
-						renderer.renderRectangle(widget.transform, newColor);
-					}
-					else
-					{
-						renderer.renderRectangle(widget.transform, {}, 0.f, widget.texture, newColor);
-					}
+					glm::vec2 pos = glm::vec2(transformDrawn);
+					pos.x += transformDrawn.z / 2.f;
+					pos.y += transformDrawn.w / 2.f;
+
+					float s = 1.5;
+					auto size = renderer.getTextSize(i.first.c_str(), font, s);
+
+					float newSx = s * (transformDrawn.z*textFit) / size.x;
+					float newSy = s * (transformDrawn.w*textFit) / size.y;
+
+					float newS = std::min(newSx, newSy);
+
+					renderer.renderText(pos, i.first.c_str(), font, Colors_White, newS);
 
 					break;
 				}
@@ -159,7 +246,7 @@ namespace glui
 
 	}
 
-	bool Button(std::string name, const gl2d::Rect transform, const gl2d::Color4f colors, const gl2d::Texture texture)
+	bool Button(std::string name, const gl2d::Rect transform, const gl2d::Color4f colors, float fontSize, const gl2d::Texture texture)
 	{
 		
 		auto find = widgets.find(name);
@@ -173,6 +260,7 @@ namespace glui
 			widget.texture = texture;
 			widget.usedThisFrame = true;
 			widget.justCreated = true;
+			widget.fontSize = fontSize;
 
 			widgets.insert({name, widget});
 			return false;
@@ -190,6 +278,10 @@ namespace glui
 
 			}
 			find->second.usedThisFrame = true;
+			find->second.transform = transform;
+			find->second.colors = colors;
+			find->second.texture = texture;
+			find->second.fontSize = fontSize;
 
 			return find->second.returnFromUpdate;
 		}

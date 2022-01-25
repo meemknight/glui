@@ -41,20 +41,33 @@ bool gameLogic(float deltaTime)
 	h = platform::getWindowSizeY();
 	
 	renderer.updateWindowMetrics(w, h);
-	renderer.clearScreen();
+	renderer.clearScreen(gl2d::Color4f(0.2,0.2,0.3, 1));
 #pragma endregion
 
-	//ImGui::ShowDemoWindow();
+	ImGui::ShowDemoWindow();
 
-	if (glui::Button("test", {100,100,100,100}, Colors_White)) 
+
+	if (glui::Button("test", {100,100,100,100}, Colors_Orange, 1.f)) 
 	{
 		std::cout << "yay\n";
 	};
 
+	glui::Button("test2\ntest2", {300,100,30,30}, Colors_Red, 1.f);
+
+	glui::Button("test3", {100,300,100,30}, Colors_Turqoise, 1.f);
+
+	glui::Button("test4", {300,300,30,50}, Colors_Magenta, 1.f);
+
+	glui::Button("test5", {200,400,130,30}, Colors_Gray, 1.f);
+	glui::Button("test6", {200,435,130,30}, Colors_Gray, 1.f);
+	glui::Button("test7", {200,470,130,30}, Colors_Gray, 1.f);
+	glui::Button("test8", {200,505,130,30}, Colors_Gray, 1.f);
+	glui::Button("test9", {200,540,130,30}, Colors_Gray, 1.f);
+
 
 #pragma region set finishing stuff
 
-	glui::renderFrame(renderer, platform::getRelMousePosition(),
+	glui::renderFrame(renderer, font, platform::getRelMousePosition(),
 		platform::isLMousePressed(), platform::isLMouseHeld(), platform::isLMouseReleased(),
 		platform::isKeyReleased(platform::Button::Escape));
 

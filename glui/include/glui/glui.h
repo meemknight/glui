@@ -13,6 +13,7 @@ namespace glui
 
 	void renderFrame(
 	gl2d::Renderer2D &renderer,
+	gl2d::Font &font,
 	glm::ivec2 mousePos,
 	bool mouseClick,
 	bool mouseHeld,
@@ -24,7 +25,7 @@ namespace glui
 
 
 	bool Button(std::string name, const gl2d::Rect transform,
-		const gl2d::Color4f colors, const gl2d::Texture texture = {});
+		const gl2d::Color4f colors, float fontSize, const gl2d::Texture texture = {});
 
 
 
