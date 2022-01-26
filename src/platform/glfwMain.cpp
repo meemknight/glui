@@ -39,6 +39,11 @@ bool fullScreen = 0;
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
+	
+	if ((action == GLFW_REPEAT || action == GLFW_PRESS) && key == GLFW_KEY_BACKSPACE)
+	{
+		platform::internal::addToTypedInput(8);
+	}
 
 	bool state = 0;
 
@@ -175,14 +180,6 @@ void characterCallback(GLFWwindow *window, unsigned int codepoint)
 	}
 }
 
-void keyCallbackType(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	if ((action == GLFW_REPEAT || action == GLFW_PRESS) && key == GLFW_KEY_BACKSPACE)
-	{
-		platform::internal::addToTypedInput(8);
-	}
-}
-
 #pragma region platform functions
 
 GLFWwindow *wind = 0;
@@ -311,7 +308,6 @@ int main()
 	glfwSetWindowSizeCallback(wind, windowSizeCallback);
 	glfwSetCursorPosCallback(wind, cursorPositionCallback);
 	glfwSetCharCallback(wind, characterCallback);
-	glfwSetKeyCallback(wind, keyCallbackType);
 
 	permaAssertComment(gladLoadGL(), "err initializing glad");
 

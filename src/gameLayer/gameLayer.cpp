@@ -52,20 +52,20 @@ bool gameLogic(float deltaTime)
 
 	glui::Text("Terarria", Colors_Gray);
 
-	if (glui::Button("Play", Colors_Blue, texture))
+	if (glui::Button("Play", Colors_Transparent, texture))
 	{
 		//play
 	}
 
-	glui::BeginMenu("settings", Colors_Gray, texture);
-		glui::BeginMenu("volume settings", Colors_Gray, texture);
+	glui::BeginMenu("settings", Colors_Transparent, texture);
+		glui::BeginMenu("volume settings", Colors_Transparent, texture);
 			static bool sound = true;
 			static bool music = true;
 			glui::Toggle("sound", Colors_Gray, &sound, texture, tick);
 			glui::Toggle("music", Colors_Gray, &music, texture, tick);
 		glui::EndMenu();
 
-		glui::BeginMenu("video settings", Colors_Gray, texture);
+		glui::BeginMenu("video settings", Colors_Transparent, texture);
 			static bool vSync = true;
 			static bool shadows = true;
 			glui::Toggle("vSync", Colors_Gray, &vSync, texture, tick);
@@ -73,13 +73,13 @@ bool gameLogic(float deltaTime)
 		glui::EndMenu();
 	glui::EndMenu();
 
-	glui::BeginMenu("create new world", Colors_Gray, texture);
+	glui::BeginMenu("create new world", Colors_Transparent, texture);
 		glui::Text("Enter world name", Colors_Gray);
 		static char text[15];
 		glui::InputText("input", text, sizeof(text));
-		glui::Button("create", Colors_Gray, texture);
+		glui::Button("create", Colors_Transparent, texture);
 	glui::EndMenu();
-	glui::Button("Exit", Colors_Red, texture);
+	glui::Button("Exit", Colors_Transparent, texture);
 
 
 	//std::cout << platform::isKeyReleased(platform::Button::Q) << "\n";
@@ -88,7 +88,7 @@ bool gameLogic(float deltaTime)
 
 	glui::renderFrame(renderer, font, platform::getRelMousePosition(),
 		platform::isLMousePressed(), platform::isLMouseHeld(), platform::isLMouseReleased(),
-		platform::isRMouseReleased(), platform::getTypedInput(), deltaTime);
+		platform::isKeyReleased(platform::Button::Escape), platform::getTypedInput(), deltaTime);
 
 	renderer.flush();
 

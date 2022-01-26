@@ -89,19 +89,16 @@ namespace glui
 	constexpr float pressDownSize = 0.04f;
 	constexpr float shadowSize = 0.1f;
 	constexpr float outlineSize = 0.02f;
-	constexpr float textFitX = 0.9f;
-	constexpr float textFitXBig = 0.95f;
-	constexpr float textFitY = 0.7f;
-	constexpr float textFitYBig = 0.75f;
+	constexpr float textFitX = 0.95f;
+	constexpr float textFitXBig = 0.98f;
+	constexpr float textFitY = 0.8f;
+	constexpr float textFitYBig = 0.85f;
 	constexpr float buttonFit  = 0.6f;
 	
-	//glm::vec4 getShadowPos(glm::vec4 transform)
-	//{
-	//	auto shadow = transform;
-	//	shadow.y += shadow.w * shadowDisplacement;
-	//	shadow.x -= shadow.z * shadowDisplacement;
-	//	return shadow;
-	//}
+	constexpr float inSizeY = 0.8;
+	constexpr float inSizeX = 0.8;
+	constexpr float mainInSizeX = 0.9;
+	constexpr float mainInSizeY = 0.9;
 
 	void splitTransforms(glm::vec4& down, glm::vec4& newTransform, glm::vec4 transform)
 	{
@@ -222,7 +219,8 @@ namespace glui
 		return glm::vec4{pos, computedSize};
 	}
 
-	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color, bool minimize = true)
+	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color, 
+		bool noTexture, bool minimize = true)
 	{
 		auto newStr = getString(str);
 
@@ -247,14 +245,16 @@ namespace glui
 		float newSy = s * (transform.w * newFitY) / size.y;
 
 		float newS = std::min(newSx, newSy);
+		if (noTexture)
+		{
+			newS = std::max(newSx, newSy);
+		}
+
+		newS = std::min(1.f, newS);
 
 		renderer.renderText(pos, newStr.c_str(), f, color, newS);
 	}
 
-	constexpr float inSizeY = 0.8;
-	constexpr float inSizeX = 0.5;
-	constexpr float mainInSizeX = 0.9;
-	constexpr float mainInSizeY = 0.9;
 
 	float timer=0;
 
@@ -450,18 +450,19 @@ namespace glui
 
 					renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
 
-					if (widget.colors.a <= 0.01f && hovered)
+					if ((widget.colors.a <= 0.01f || i.second.texture.id == 0))
 					{
-						renderText(renderer, j.first, font, transformDrawn, textColor, false);
+						renderText(renderer, j.first, font, transformDrawn, textColor, true, !hovered);
 					}
 					else
 					{
-						renderText(renderer, j.first, font, transformDrawn, textColor);
+						renderText(renderer, j.first, font, transformDrawn, textColor, false, hovered);
 					}
 
 					return widget.returnFromUpdate;
 				};
 
+				
 				switch (widget.type)
 				{
 					case widgetType::button:
@@ -511,12 +512,12 @@ namespace glui
 
 						if (hovered)
 						{
-							renderText(renderer, j.first, font, textTransform, stepColorDown(Colors_White, 0.8)
-								, false);
+							renderText(renderer, j.first, font, textTransform, stepColorDown(Colors_White, 0.8),
+								true, false);
 						}
 						else
 						{
-							renderText(renderer, j.first, font, textTransform, Colors_White);
+							renderText(renderer, j.first, font, textTransform, Colors_White, true);
 						}
 						
 
@@ -551,7 +552,7 @@ namespace glui
 					case widgetType::text:
 					{
 
-						renderText(renderer, j.first, font, computedPos, j.second.colors);
+						renderText(renderer, j.first, font, computedPos, j.second.colors, true);
 
 						break;
 					}
@@ -599,7 +600,7 @@ namespace glui
 							textCopy += "|";
 						}
 
-						renderText(renderer, textCopy, font, computedPos, Colors_White);
+						renderText(renderer, textCopy, font, computedPos, Colors_White, true);
 
 
 						break;
