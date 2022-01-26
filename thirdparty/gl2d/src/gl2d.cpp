@@ -873,6 +873,7 @@ namespace gl2d
 		}
 		else
 		{
+
 			leftBorder /= newAspectRatio;
 			rightBorder /= newAspectRatio;
 		}

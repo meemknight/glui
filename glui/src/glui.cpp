@@ -107,7 +107,11 @@ namespace glui
 	glm::vec4 stepColorUp(glm::vec4 color, float perc)
 	{
 		glm::vec4 inversColor = glm::vec4(1, 1, 1, 1) - color;
-		return inversColor * perc + color;
+		inversColor = inversColor * perc + color;
+	
+		inversColor = glm::clamp(inversColor, {0,0,0,0}, {1,1,1,1});
+
+		return glm::vec4(glm::vec3(inversColor), color.a);
 	}
 	glm::vec4 stepColorDown(glm::vec4 color, float perc)
 	{
@@ -165,7 +169,10 @@ namespace glui
 		}
 		else
 		{
-			renderer.renderRectangle(transform, {}, 0.f, t, newColor);
+			//renderer.renderRectangle(transform, newColor, {}, 0.f, t);
+			//renderer.render9Patch2(transform, newColor, {}, 0.f, t, GL2D_DefaultTextureCoords, {2.f/26.f, 24.f / 26.f,24.f / 26.f,2.f / 26.f});
+			renderer.render9Patch2(transform, newColor, {}, 0.f, t, GL2D_DefaultTextureCoords, {0.2,0.8,0.8,0.2});
+		
 		}
 	}
 

@@ -20,8 +20,9 @@ struct GameData
 bool initGame()
 {
 	renderer.create();
-	font.createFromFile(RESOURCES_PATH "roboto_black.ttf");
-	texture.loadFromFile(RESOURCES_PATH "test.jpg");
+	//font.createFromFile(RESOURCES_PATH "roboto_black.ttf");
+	font.createFromFile(RESOURCES_PATH "font/ANDYB.TTF");
+	texture.loadFromFile(RESOURCES_PATH "ui.png", true);
 
 	if(!platform::readEntireFile(RESOURCES_PATH "gameData.data", &gameData, sizeof(GameData)))
 	{
@@ -47,25 +48,25 @@ bool gameLogic(float deltaTime)
 	ImGui::ShowDemoWindow();
 
 
-	if (glui::Button("test", Colors_Orange)) 
+	if (glui::Button("test", Colors_Orange, texture))
 	{
 		std::cout << "yay\n";
 	};
 
-	glui::Button("test2\ntest2", Colors_Red);
+	glui::Button("test2\ntest2", Colors_Red, texture);
 
-	glui::Button("test3", Colors_Turqoise);
+	glui::Button("test3", Colors_Turqoise, texture);
 
-	glui::Button("test4", Colors_Magenta);
+	glui::Button("test4", Colors_Magenta, texture);
 
-	glui::Button("test5", Colors_Gray);
-	glui::Button("test6", Colors_Gray);
-	glui::Button("test7", Colors_Gray);
-	glui::Button("test8", Colors_Gray);
-	glui::Button("test9", Colors_Gray);
+	glui::Button("test5", Colors_White, texture);
+	glui::Button("test6", Colors_White, texture);
+	glui::Button("test7", Colors_Gray, texture);
+	glui::Button("test8", Colors_Gray, texture);
+	glui::Button("test9", Colors_Gray, texture);
 
 	static bool t = false;
-	glui::Toggle("toggle", Colors_Gray, &t);
+	glui::Toggle("toggle", Colors_Gray, &t, texture, texture);
 
 
 #pragma region set finishing stuff
