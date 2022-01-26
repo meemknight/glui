@@ -1223,7 +1223,15 @@ namespace gl2d
 				{
 					break;
 				}
-				else if (text[i] >= ' ' && text[i] <= '~')
+				else if (text[i] == ' ')
+				{
+					const stbtt_aligned_quad quad = internal::fontGetGlyphQuad
+					(font, '.');
+					rectangle.w = quad.y1 - quad.y0;
+					rectangle.w *= size;
+					maxH = std::max(maxH, rectangle.w);
+				}
+				else if (text[i] > ' ' && text[i] <= '~')
 				{
 					const stbtt_aligned_quad quad = internal::fontGetGlyphQuad
 					(font, text[i]);
@@ -1262,7 +1270,7 @@ namespace gl2d
 			else if (text[i] == ' ')
 			{
 				const stbtt_aligned_quad quad = internal::fontGetGlyphQuad
-				(font, '_');
+				(font, '.');
 				auto x = quad.x1 - quad.x0;
 				rectangle.x += x * size + spacing * size;
 			}

@@ -254,9 +254,17 @@ namespace glui
 	constexpr float mainInSizeX = 0.9;
 	constexpr float mainInSizeY = 0.9;
 
+	float timer=0;
+
 	void renderFrame(gl2d::Renderer2D& renderer, gl2d::Font& font, glm::ivec2 mousePos, bool mouseClick,
-		bool mouseHeld, bool mouseReleased, bool escapeReleased, const std::string& typedInput)
+		bool mouseHeld, bool mouseReleased, bool escapeReleased, const std::string& typedInput, float deltaTime)
 	{
+		timer += deltaTime*2;
+		if (timer >= 2.f)
+		{
+			timer -= 2;
+		}
+
 		int countOnY = 0;
 		for (auto& i : widgetsVector)
 		{
@@ -486,7 +494,19 @@ namespace glui
 							}
 						}
 
-						renderText(renderer, text, font, computedPos, Colors_White);
+						if (i.second.texture.id != 0)
+						{
+							renderFancyBox(renderer, computedPos, i.second.colors, widget.texture, 0, 0);
+						}
+						
+						std::string textCopy = text;
+						if ((int)timer % 2)
+						{
+							textCopy += "|";
+						}
+
+						renderText(renderer, textCopy, font, computedPos, Colors_White);
+
 
 						break;
 					}
@@ -627,14 +647,17 @@ namespace glui
 		widgetsVector.push_back({name, widget});
 	}
 
-	void glui::InputText(std::string name, char* text, size_t textSizeWithNullChar)
+	void InputText(std::string name, char* text, size_t textSizeWithNullChar, 
+		gl2d::Color4f color, const gl2d::Texture texture)
 	{
 		name += idStr;
 
 		Widget widget = {};
 		widget.type = widgetType::textInput;
 		widget.pointer = text;
+		widget.colors = color;
 		widget.textSize = textSizeWithNullChar;
+		widget.texture = texture;
 		widget.usedThisFrame = true;
 		widget.justCreated = true;
 		widgetsVector.push_back({name, widget});

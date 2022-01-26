@@ -19,7 +19,8 @@ namespace glui
 	bool mouseHeld,
 	bool mouseReleased,
 	bool escapeReleased,
-	const std::string &typedInput
+	const std::string &typedInput,
+	float deltaTime
 	);
 
 
@@ -33,7 +34,7 @@ namespace glui
 		const gl2d::Color4f colors);
 
 	void InputText(std::string name,
-		char* text, size_t textSizeWithNullChar);
+		char* text, size_t textSizeWithNullChar, gl2d::Color4f color = {0,0,0,0}, const gl2d::Texture texture = {});
 
 	void PushId(int id);
 
