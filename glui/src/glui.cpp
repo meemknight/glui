@@ -50,7 +50,6 @@ namespace glui
 		bool justCreated = true;
 		bool usedThisFrame = 0;
 		InputData lastFrameData = {};
-		gl2d::Rect transform = {};
 		gl2d::Color4f colors = Colors_White;
 		gl2d::Texture texture = {};
 		gl2d::Texture textureOver = {};
@@ -76,6 +75,8 @@ namespace glui
 		}
 	}
 
+	std::vector<std::pair<std::string, Widget>> widgetsVector;
+
 	std::unordered_map<std::string, Widget> widgets;
 
 	constexpr float pressDownSize = 0.04f;
@@ -83,7 +84,7 @@ namespace glui
 	constexpr float outlineSize = 0.02f;
 	constexpr float textFitX = 0.9f;
 	constexpr float textFitY = 0.7f;
-	constexpr float buttonFit  = 0.7f;
+	constexpr float buttonFit  = 0.6f;
 	
 	//glm::vec4 getShadowPos(glm::vec4 transform)
 	//{
@@ -168,25 +169,35 @@ namespace glui
 		}
 	}
 
+
+	constexpr float inSizeY = 0.8;
+	constexpr float inSizeX = 0.5;
+	constexpr float mainInSizeX = 0.9;
+	constexpr float mainInSizeY = 0.9;
+
 	void renderFrame(gl2d::Renderer2D& renderer, gl2d::Font& font, glm::ivec2 mousePos, bool mouseClick, bool mouseHeld, bool mouseReleased, bool escapeReleased)
 	{
+		int countOnY = 0;
+		for (auto& i : widgetsVector)
+		{
+			countOnY++;
+		}
+		float sizeWithPaddY = ((float)renderer.windowH / countOnY);
+		float sizeY = sizeWithPaddY * inSizeY;
+		float paddSizeY = sizeWithPaddY * (1 - inSizeY) / 2.f;
+
+		float sizeWithPaddX = (float)renderer.windowW;
+		float sizeX = sizeWithPaddX * inSizeX;
+		float paddSizeX = sizeWithPaddX * (1 - inSizeX) / 2.f;
+
+		glm::vec4 computedPos;
+		computedPos.x = paddSizeX + (float)renderer.windowW * (1 - mainInSizeX) * 0.5;
+		computedPos.y = paddSizeY + (float)renderer.windowH * (1 - mainInSizeY) * 0.5;
+		computedPos.z = sizeX * mainInSizeX;
+		computedPos.w = sizeY * mainInSizeY;
 
 		auto camera = renderer.currentCamera;
 		renderer.currentCamera.setDefault();
-
-		//clear unused data
-		{
-			std::unordered_map<std::string, Widget> widgets2;
-			widgets2.reserve(widgets.size());
-			for (auto& i : widgets)
-			{
-				if (i.second.usedThisFrame)
-				{
-					widgets2.insert(i);
-				}
-			}
-			widgets = std::move(widgets2);
-		}
 
 		InputData input;
 		input.mousePos = mousePos;
@@ -195,191 +206,379 @@ namespace glui
 		input.mouseReleased = mouseReleased;
 		input.escapeReleased = escapeReleased;
 
-		for (auto& i : widgets)
+	
+		
+
+		for (auto& i : widgetsVector)
 		{
-			auto& widget = i.second;
-			widget.usedThisFrame = false;
-			widget.justCreated = false;
+			auto find = widgets.find(i.first);
 
-			switch (widget.type)
+			if (find == widgets.end())
 			{
-				case widgetType::button:
+				
+				i.second.usedThisFrame = true;
+				i.second.justCreated = true;
+			
+				widgets.insert(i);
+				//continue;
+			}
+			else
+			{
+				if (find->second.type != i.second.type)
 				{
-					auto transformDrawn = widget.transform;
-					bool hovered = 0;
-					bool clicked = 0;
-
-					if (aabb(widget.transform, input.mousePos))
-					{
-						hovered = true;
-						if (input.mouseHeld)
-						{
-							clicked = true;
-							transformDrawn.y += transformDrawn.w * pressDownSize;
-						}
-					}
-
-					if (input.mouseReleased && aabb(widget.transform, input.mousePos))
-					{
-						widget.returnFromUpdate = true;
-					}
-					else
-					{
-						widget.returnFromUpdate = false;
-					}
-
-					renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
-
-					glm::vec2 pos = glm::vec2(transformDrawn);
-					pos.x += transformDrawn.z / 2.f;
-					pos.y += transformDrawn.w / 2.f;
-
-					float s = 1.5;
-					auto size = renderer.getTextSize(i.first.c_str(), font, s);
-
-					float newSx = s * (transformDrawn.z* textFitX) / size.x;
-					float newSy = s * (transformDrawn.w* textFitY) / size.y;
-
-					float newS = std::min(newSx, newSy);
-
-					renderer.renderText(pos, i.first.c_str(), font, Colors_White, newS);
-
-					break;
+					errorFunc("reupdated a widget with a different type");
 				}
-				case widgetType::toggle:
+			
+				if (find->second.usedThisFrame == true)
 				{
-					auto transformDrawn = widget.transform;
-					bool hovered = 0;
-					bool clicked = 0;
-
-					if (aabb(widget.transform, input.mousePos))
-					{
-						hovered = true;
-						if (input.mouseHeld)
-						{
-							clicked = true;
-							transformDrawn.y += transformDrawn.w * pressDownSize;
-						}
-					}
-
-					if (input.mouseReleased && aabb(widget.transform, input.mousePos))
-					{
-						*(bool*)(widget.pointer) = !(*(bool*)(widget.pointer));
-					}
-
-					widget.returnFromUpdate = *(bool*)(widget.pointer);
-
-					if (widget.returnFromUpdate)
-					{
-						auto small = transformDrawn;
-						small.z *= buttonFit;
-						small.w *= buttonFit;
-						small.x += transformDrawn.z * (1.f - buttonFit) / 2.f;
-						small.y += transformDrawn.w * (1.f - buttonFit) / 2.f;
-
-						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
-						renderFancyBox(renderer, small, widget.colors, widget.textureOver, false, false);
-					}
-					else
-					{
-						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
-					}
-
-					break;
+					errorFunc("used a widget name twice");
 				}
-
-
-
+				find->second.usedThisFrame = true;
+				//continue;
 			}
 
-			widget.lastFrameData = input;
+			{
+				auto &j = *widgets.find(i.first);
+				auto& widget = j.second;
+
+				switch (widget.type)
+				{
+					case widgetType::button:
+					{
+						auto transformDrawn = computedPos;
+						bool hovered = 0;
+						bool clicked = 0;
+
+						if (aabb(computedPos, input.mousePos))
+						{
+							hovered = true;
+							if (input.mouseHeld)
+							{
+								clicked = true;
+								transformDrawn.y += transformDrawn.w * pressDownSize;
+							}
+						}
+
+						if (input.mouseReleased && aabb(computedPos, input.mousePos))
+						{
+							widget.returnFromUpdate = true;
+						}
+						else
+						{
+							widget.returnFromUpdate = false;
+						}
+
+						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+
+						glm::vec2 pos = glm::vec2(transformDrawn);
+						pos.x += transformDrawn.z / 2.f;
+						pos.y += transformDrawn.w / 2.f;
+
+						float s = 1.5;
+						auto size = renderer.getTextSize(j.first.c_str(), font, s);
+
+						float newSx = s * (transformDrawn.z * textFitX) / size.x;
+						float newSy = s * (transformDrawn.w * textFitY) / size.y;
+
+						float newS = std::min(newSx, newSy);
+
+						renderer.renderText(pos, j.first.c_str(), font, Colors_White, newS);
+
+						break;
+					}
+					case widgetType::toggle:
+					{
+						auto transformDrawn = computedPos;
+						bool hovered = 0;
+						bool clicked = 0;
+
+						if (aabb(computedPos, input.mousePos))
+						{
+							hovered = true;
+							if (input.mouseHeld)
+							{
+								clicked = true;
+								transformDrawn.y += transformDrawn.w * pressDownSize;
+							}
+						}
+
+						if (input.mouseReleased && aabb(computedPos, input.mousePos))
+						{
+							*(bool*)(widget.pointer) = !(*(bool*)(widget.pointer));
+						}
+
+						widget.returnFromUpdate = *(bool*)(widget.pointer);
+
+						if (widget.returnFromUpdate)
+						{
+							auto small = transformDrawn;
+							small.z *= buttonFit;
+							small.w *= buttonFit;
+							small.x += transformDrawn.z * (1.f - buttonFit) / 2.f;
+							small.y += transformDrawn.w * (1.f - buttonFit) / 2.f;
+
+							renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+							renderFancyBox(renderer, small, widget.colors, widget.textureOver, false, false);
+						}
+						else
+						{
+							renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+						}
+
+						break;
+					}
+
+				}
+
+				widget.justCreated = false;
+				widget.lastFrameData = input;
+			}
+
+			computedPos.y += (paddSizeY * 2 + sizeY) * mainInSizeY;
 		}
+
+		
+		//clear unused data
+		{
+			std::unordered_map<std::string, Widget> widgets2;
+			widgets2.reserve(widgets.size());
+			for (auto& i : widgets)
+			{
+				if (i.second.usedThisFrame)
+				{
+					i.second.usedThisFrame = false;
+					widgets2.insert(i);
+				}
+			}
+			widgets = std::move(widgets2);
+		}
+
+		
+		//for (auto& i : widgets)
+		//{
+		//	auto& widget = i.second;
+		//	widget.usedThisFrame = false;
+		//	widget.justCreated = false;
+		//
+		//	switch (widget.type)
+		//	{
+		//		case widgetType::button:
+		//		{
+		//			auto transformDrawn = widget.transform;
+		//			bool hovered = 0;
+		//			bool clicked = 0;
+		//
+		//			if (aabb(widget.transform, input.mousePos))
+		//			{
+		//				hovered = true;
+		//				if (input.mouseHeld)
+		//				{
+		//					clicked = true;
+		//					transformDrawn.y += transformDrawn.w * pressDownSize;
+		//				}
+		//			}
+		//
+		//			if (input.mouseReleased && aabb(widget.transform, input.mousePos))
+		//			{
+		//				widget.returnFromUpdate = true;
+		//			}
+		//			else
+		//			{
+		//				widget.returnFromUpdate = false;
+		//			}
+		//
+		//			renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+		//
+		//			glm::vec2 pos = glm::vec2(transformDrawn);
+		//			pos.x += transformDrawn.z / 2.f;
+		//			pos.y += transformDrawn.w / 2.f;
+		//
+		//			float s = 1.5;
+		//			auto size = renderer.getTextSize(i.first.c_str(), font, s);
+		//
+		//			float newSx = s * (transformDrawn.z* textFitX) / size.x;
+		//			float newSy = s * (transformDrawn.w* textFitY) / size.y;
+		//
+		//			float newS = std::min(newSx, newSy);
+		//
+		//			renderer.renderText(pos, i.first.c_str(), font, Colors_White, newS);
+		//
+		//			break;
+		//		}
+		//		case widgetType::toggle:
+		//		{
+		//			auto transformDrawn = widget.transform;
+		//			bool hovered = 0;
+		//			bool clicked = 0;
+		//
+		//			if (aabb(widget.transform, input.mousePos))
+		//			{
+		//				hovered = true;
+		//				if (input.mouseHeld)
+		//				{
+		//					clicked = true;
+		//					transformDrawn.y += transformDrawn.w * pressDownSize;
+		//				}
+		//			}
+		//
+		//			if (input.mouseReleased && aabb(widget.transform, input.mousePos))
+		//			{
+		//				*(bool*)(widget.pointer) = !(*(bool*)(widget.pointer));
+		//			}
+		//
+		//			widget.returnFromUpdate = *(bool*)(widget.pointer);
+		//
+		//			if (widget.returnFromUpdate)
+		//			{
+		//				auto small = transformDrawn;
+		//				small.z *= buttonFit;
+		//				small.w *= buttonFit;
+		//				small.x += transformDrawn.z * (1.f - buttonFit) / 2.f;
+		//				small.y += transformDrawn.w * (1.f - buttonFit) / 2.f;
+		//
+		//				renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+		//				renderFancyBox(renderer, small, widget.colors, widget.textureOver, false, false);
+		//			}
+		//			else
+		//			{
+		//				renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+		//			}
+		//
+		//			break;
+		//		}
+		//
+		//
+		//
+		//	}
+		//
+		//	widget.lastFrameData = input;
+		//}
 
 
 		renderer.currentCamera = camera;
 
-	}
-
-	bool Button(std::string name, const gl2d::Rect transform, const gl2d::Color4f colors, const gl2d::Texture texture)
-	{
-		
-		auto find = widgets.find(name);
-		
-		if (find == widgets.end())
-		{
-			Widget widget = {};
-			widget.type = widgetType::button;
-			widget.transform = transform;
-			widget.colors = colors;
-			widget.texture = texture;
-			widget.usedThisFrame = true;
-			widget.justCreated = true;
-
-			widgets.insert({name, widget});
-			return false;
-		}
-		else
-		{
-			if (find->second.type != widgetType::button)
-			{
-				errorFunc("reupdated a widget with a different type");
-			}
-
-			if (find->second.usedThisFrame == true)
-			{
-				errorFunc("used a widget name twice");
-
-			}
-			find->second.usedThisFrame = true;
-			find->second.transform = transform;
-			find->second.colors = colors;
-			find->second.texture = texture;
-
-			return find->second.returnFromUpdate;
-		}
+		widgetsVector.clear();
 
 	}
 
-	bool Toggle(std::string name, const gl2d::Rect transform, const gl2d::Color4f colors, bool* toggle, const gl2d::Texture texture, const gl2d::Texture overTexture)
+	bool Button(std::string name, const gl2d::Color4f colors, const gl2d::Texture texture)
 	{
+		
+		Widget widget = {};
+		widget.type = widgetType::button;
+		widget.colors = colors;
+		widget.texture = texture;
+		widget.usedThisFrame = true;
+		widget.justCreated = true;
+		widgetsVector.push_back({name, widget});
+
 		auto find = widgets.find(name);
-
-		if (find == widgets.end())
+		if (find != widgets.end())
 		{
-			Widget widget = {};
-			widget.type = widgetType::toggle;
-			widget.transform = transform;
-			widget.colors = colors;
-			widget.texture = texture;
-			widget.textureOver = overTexture;
-			widget.usedThisFrame = true;
-			widget.justCreated = true;
-			widget.pointer = toggle;
-
-			widgets.insert({name, widget});
-			return false;
+			return find->second.returnFromUpdate;
 		}
 		else
 		{
-			if (find->second.type != widgetType::toggle)
-			{
-				errorFunc("reupdated a widget with a different type");
-			}
+			return false;
+		}
 
-			if (find->second.usedThisFrame == true)
-			{
-				errorFunc("used a widget name twice");
+		//auto find = widgets.find(name);
+		//
+		//if (find == widgets.end())
+		//{
+		//	Widget widget = {};
+		//	widget.type = widgetType::button;
+		//	widget.transform = transform;
+		//	widget.colors = colors;
+		//	widget.texture = texture;
+		//	widget.usedThisFrame = true;
+		//	widget.justCreated = true;
+		//
+		//	widgets.insert({name, widget});
+		//	return false;
+		//}
+		//else
+		//{
+		//	if (find->second.type != widgetType::button)
+		//	{
+		//		errorFunc("reupdated a widget with a different type");
+		//	}
+		//
+		//	if (find->second.usedThisFrame == true)
+		//	{
+		//		errorFunc("used a widget name twice");
+		//
+		//	}
+		//	find->second.usedThisFrame = true;
+		//	find->second.transform = transform;
+		//	find->second.colors = colors;
+		//	find->second.texture = texture;
+		//
+		//	return find->second.returnFromUpdate;
+		//}
 
-			}
-			find->second.usedThisFrame = true;
-			find->second.transform = transform;
-			find->second.colors = colors;
-			find->second.texture = texture;
-			find->second.textureOver = overTexture;
-			find->second.pointer = toggle;
+	}
 
+	bool Toggle(std::string name, const gl2d::Color4f colors, bool* toggle, const gl2d::Texture texture, const gl2d::Texture overTexture)
+	{
+		Widget widget = {};
+		widget.type = widgetType::toggle;
+		widget.colors = colors;
+		widget.texture = texture;
+		widget.textureOver = overTexture;
+		widget.usedThisFrame = true;
+		widget.justCreated = true;
+		widget.pointer = toggle;
+		widgetsVector.push_back({name, widget});
+
+		auto find = widgets.find(name);
+		if (find != widgets.end())
+		{
 			return find->second.returnFromUpdate;
 		}
+		else
+		{
+			return false;
+		}
+
+		//auto find = widgets.find(name);
+		//
+		//if (find == widgets.end())
+		//{
+		//	Widget widget = {};
+		//	widget.type = widgetType::toggle;
+		//	widget.transform = transform;
+		//	widget.colors = colors;
+		//	widget.texture = texture;
+		//	widget.textureOver = overTexture;
+		//	widget.usedThisFrame = true;
+		//	widget.justCreated = true;
+		//	widget.pointer = toggle;
+		//
+		//	widgets.insert({name, widget});
+		//	return false;
+		//}
+		//else
+		//{
+		//	if (find->second.type != widgetType::toggle)
+		//	{
+		//		errorFunc("reupdated a widget with a different type");
+		//	}
+		//
+		//	if (find->second.usedThisFrame == true)
+		//	{
+		//		errorFunc("used a widget name twice");
+		//
+		//	}
+		//	find->second.usedThisFrame = true;
+		//	find->second.transform = transform;
+		//	find->second.colors = colors;
+		//	find->second.texture = texture;
+		//	find->second.textureOver = overTexture;
+		//	find->second.pointer = toggle;
+		//
+		//	return find->second.returnFromUpdate;
+		//}
 	}
 
 };

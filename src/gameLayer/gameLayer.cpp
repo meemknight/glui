@@ -47,26 +47,25 @@ bool gameLogic(float deltaTime)
 	ImGui::ShowDemoWindow();
 
 
-	if (glui::Button("test", {100,100,100,100}, Colors_Orange)) 
+	if (glui::Button("test", Colors_Orange)) 
 	{
 		std::cout << "yay\n";
 	};
 
-	glui::Button("test2\ntest2", {300,100,30,30}, Colors_Red);
+	glui::Button("test2\ntest2", Colors_Red);
 
-	glui::Button("test3", {100,300,100,30}, Colors_Turqoise);
+	glui::Button("test3", Colors_Turqoise);
 
-	glui::Button("test4", {300,300,30,50}, Colors_Magenta);
+	glui::Button("test4", Colors_Magenta);
 
-	glui::Button("test5", {200,400,130,30}, Colors_Gray);
-	glui::Button("test6", {200,435,130,30}, Colors_Gray);
-	glui::Button("test7", {200,470,130,30}, Colors_Gray);
-	glui::Button("test8", {200,505,130,30}, Colors_Gray);
-	glui::Button("test9", {200,540,130,30}, Colors_Gray);
+	glui::Button("test5", Colors_Gray);
+	glui::Button("test6", Colors_Gray);
+	glui::Button("test7", Colors_Gray);
+	glui::Button("test8", Colors_Gray);
+	glui::Button("test9", Colors_Gray);
 
 	static bool t = false;
-	glui::Toggle("toggle", {50,50,30,30}, Colors_Gray, &t);
-
+	glui::Toggle("toggle", Colors_Gray, &t);
 
 
 #pragma region set finishing stuff

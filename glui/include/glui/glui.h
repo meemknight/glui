@@ -22,10 +22,10 @@ namespace glui
 	);
 
 
-	bool Button(std::string name, const gl2d::Rect transform,
+	bool Button(std::string name,
 		const gl2d::Color4f colors, const gl2d::Texture texture = {});
 
-	bool Toggle(std::string name, const gl2d::Rect transform,
+	bool Toggle(std::string name,
 		const gl2d::Color4f colors, bool* toggle, const gl2d::Texture texture = {}, const gl2d::Texture overTexture = {});
 
 };
