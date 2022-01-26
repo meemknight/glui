@@ -31,6 +31,7 @@ namespace glui
 	{
 		none = 0,
 		button,
+		toggle,
 	};
 
 	struct InputData
@@ -52,8 +53,9 @@ namespace glui
 		gl2d::Rect transform = {};
 		gl2d::Color4f colors = Colors_White;
 		gl2d::Texture texture = {};
-		float fontSize = 0.f;
+		gl2d::Texture textureOver = {};
 		bool returnFromUpdate = 0;
+		void* pointer = 0;
 	};
 
 
@@ -77,9 +79,11 @@ namespace glui
 	std::unordered_map<std::string, Widget> widgets;
 
 	constexpr float pressDownSize = 0.04f;
-	constexpr float shadowSize = 0.2f;
+	constexpr float shadowSize = 0.1f;
 	constexpr float outlineSize = 0.02f;
-	constexpr float textFit  = 0.8f;
+	constexpr float textFitX = 0.9f;
+	constexpr float textFitY = 0.7f;
+	constexpr float buttonFit  = 0.7f;
 	
 	//glm::vec4 getShadowPos(glm::vec4 transform)
 	//{
@@ -117,7 +121,7 @@ namespace glui
 		float colorDim = 0.f;
 		if (hovered)
 		{
-			//colorDim += 0.2f;
+			colorDim += 0.2f;
 			if (clicked)
 			{
 				colorDim += 0.1f;
@@ -126,23 +130,30 @@ namespace glui
 
 		auto newColor = stepColorUp(color, colorDim);
 		auto lightColor = stepColorUp(newColor, 0.02);
-		auto outlineColor = stepColorUp(newColor, 0.3);
 		auto darkColor = stepColorDown(newColor, 0.5f);
 		auto darkerColor = stepColorDown(newColor, 0.25f);
+		
+		auto outlineColor = stepColorUp(newColor, 0.3);
+		//auto outlineColor = darkerColor;
 
 		glm::vec4 colorVector[4] = {darkColor, darkColor, lightColor, lightColor};
 
 		if (t.id == 0)
 		{
+			
+			float calculatedOutline = outlineSize * std::min(transform.w, transform.z);
 			if (hovered)
 			{
-				float calculatedOutline = outlineSize * std::min(transform.w, transform.z);
 				renderer.renderRectangle(transform, outlineColor);
-				transform.x	+= calculatedOutline;
-				transform.y	+= calculatedOutline;
-				transform.z -= calculatedOutline * 2;
-				transform.w -= calculatedOutline * 2;
 			}
+			else
+			{
+				renderer.renderRectangle(transform, darkColor);
+			}
+			transform.x += calculatedOutline;
+			transform.y += calculatedOutline;
+			transform.z -= calculatedOutline * 2;
+			transform.w -= calculatedOutline * 2;
 
 			glm::vec4 middle = {};
 			glm::vec4 down = {};
@@ -226,8 +237,8 @@ namespace glui
 					float s = 1.5;
 					auto size = renderer.getTextSize(i.first.c_str(), font, s);
 
-					float newSx = s * (transformDrawn.z*textFit) / size.x;
-					float newSy = s * (transformDrawn.w*textFit) / size.y;
+					float newSx = s * (transformDrawn.z* textFitX) / size.x;
+					float newSy = s * (transformDrawn.w* textFitY) / size.y;
 
 					float newS = std::min(newSx, newSy);
 
@@ -235,6 +246,49 @@ namespace glui
 
 					break;
 				}
+				case widgetType::toggle:
+				{
+					auto transformDrawn = widget.transform;
+					bool hovered = 0;
+					bool clicked = 0;
+
+					if (aabb(widget.transform, input.mousePos))
+					{
+						hovered = true;
+						if (input.mouseHeld)
+						{
+							clicked = true;
+							transformDrawn.y += transformDrawn.w * pressDownSize;
+						}
+					}
+
+					if (input.mouseReleased && aabb(widget.transform, input.mousePos))
+					{
+						*(bool*)(widget.pointer) = !(*(bool*)(widget.pointer));
+					}
+
+					widget.returnFromUpdate = *(bool*)(widget.pointer);
+
+					if (widget.returnFromUpdate)
+					{
+						auto small = transformDrawn;
+						small.z *= buttonFit;
+						small.w *= buttonFit;
+						small.x += transformDrawn.z * (1.f - buttonFit) / 2.f;
+						small.y += transformDrawn.w * (1.f - buttonFit) / 2.f;
+
+						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+						renderFancyBox(renderer, small, widget.colors, widget.textureOver, false, false);
+					}
+					else
+					{
+						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+					}
+
+					break;
+				}
+
+
 
 			}
 
@@ -246,7 +300,7 @@ namespace glui
 
 	}
 
-	bool Button(std::string name, const gl2d::Rect transform, const gl2d::Color4f colors, float fontSize, const gl2d::Texture texture)
+	bool Button(std::string name, const gl2d::Rect transform, const gl2d::Color4f colors, const gl2d::Texture texture)
 	{
 		
 		auto find = widgets.find(name);
@@ -260,7 +314,6 @@ namespace glui
 			widget.texture = texture;
 			widget.usedThisFrame = true;
 			widget.justCreated = true;
-			widget.fontSize = fontSize;
 
 			widgets.insert({name, widget});
 			return false;
@@ -281,12 +334,52 @@ namespace glui
 			find->second.transform = transform;
 			find->second.colors = colors;
 			find->second.texture = texture;
-			find->second.fontSize = fontSize;
 
 			return find->second.returnFromUpdate;
 		}
 
 	}
 
+	bool Toggle(std::string name, const gl2d::Rect transform, const gl2d::Color4f colors, bool* toggle, const gl2d::Texture texture, const gl2d::Texture overTexture)
+	{
+		auto find = widgets.find(name);
+
+		if (find == widgets.end())
+		{
+			Widget widget = {};
+			widget.type = widgetType::toggle;
+			widget.transform = transform;
+			widget.colors = colors;
+			widget.texture = texture;
+			widget.textureOver = overTexture;
+			widget.usedThisFrame = true;
+			widget.justCreated = true;
+			widget.pointer = toggle;
+
+			widgets.insert({name, widget});
+			return false;
+		}
+		else
+		{
+			if (find->second.type != widgetType::toggle)
+			{
+				errorFunc("reupdated a widget with a different type");
+			}
+
+			if (find->second.usedThisFrame == true)
+			{
+				errorFunc("used a widget name twice");
+
+			}
+			find->second.usedThisFrame = true;
+			find->second.transform = transform;
+			find->second.colors = colors;
+			find->second.texture = texture;
+			find->second.textureOver = overTexture;
+			find->second.pointer = toggle;
+
+			return find->second.returnFromUpdate;
+		}
+	}
 
 };
