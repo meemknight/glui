@@ -40,4 +40,7 @@ namespace glui
 
 	void PopId();
 
+	void BeginMenu(std::string name);
+	void EndMenu();
+
 };

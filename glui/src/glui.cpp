@@ -34,6 +34,8 @@ namespace glui
 		toggle,
 		text,
 		textInput,
+		beginMenu,
+		endMenu,
 	};
 
 	struct InputData
@@ -265,12 +267,58 @@ namespace glui
 			timer -= 2;
 		}
 
-		int countOnY = 0;
-		for (auto& i : widgetsVector)
+		std::vector<std::pair<std::string, Widget>> widgetsCopy;
+		widgetsCopy.reserve(widgetsVector.size());
+
 		{
-			countOnY++;
-		}
-		float sizeWithPaddY = ((float)renderer.windowH / countOnY);
+			std::vector<std::string> menuStack;
+			static std::vector<std::string> currentMenuStack;
+
+			std::string nextMenu = "";
+			if (!currentMenuStack.empty())
+			{
+				nextMenu = currentMenuStack.front();
+			}
+
+			bool shouldIgnor = false;
+			int nextStackSizeToLook = 0;
+
+			for (auto& i : widgetsVector)
+			{
+				if (i.second.type == widgetType::beginMenu)
+				{
+					menuStack.push_back(i.first);
+
+					if (i.first != nextMenu)
+					{
+						shouldIgnor = true;
+						nextStackSizeToLook = menuStack.size() - 1;
+					}
+					continue;
+				}
+
+				if (i.second.type == widgetType::endMenu)
+				{
+					i.first = "##$" + menuStack.back();
+					menuStack.pop_back();
+
+					if (nextStackSizeToLook == menuStack.size())
+					{
+						shouldIgnor = false;
+					}
+					continue;
+				}
+
+				if (shouldIgnor)
+				{
+					continue;
+				}
+
+				widgetsCopy.push_back(i);
+			}
+		};
+
+		float sizeWithPaddY = ((float)renderer.windowH / widgetsCopy.size());
 		float sizeY = sizeWithPaddY * inSizeY;
 		float paddSizeY = sizeWithPaddY * (1 - inSizeY) / 2.f;
 
@@ -294,8 +342,10 @@ namespace glui
 		input.mouseReleased = mouseReleased;
 		input.escapeReleased = escapeReleased;
 
-		for (auto& i : widgetsVector)
+		
+		for (auto& i : widgetsCopy)
 		{
+
 			auto find = widgets.find(i.first);
 
 			if (find == widgets.end())
@@ -303,8 +353,9 @@ namespace glui
 				
 				i.second.usedThisFrame = true;
 				i.second.justCreated = true;
-			
 				widgets.insert(i);
+				
+				
 				//continue;
 			}
 			else
@@ -514,6 +565,7 @@ namespace glui
 
 				}
 
+
 				widget.justCreated = false;
 				widget.lastFrameData = input;
 			}
@@ -571,42 +623,7 @@ namespace glui
 		{
 			return false;
 		}
-
-		//auto find = widgets.find(name);
-		//
-		//if (find == widgets.end())
-		//{
-		//	Widget widget = {};
-		//	widget.type = widgetType::button;
-		//	widget.transform = transform;
-		//	widget.colors = colors;
-		//	widget.texture = texture;
-		//	widget.usedThisFrame = true;
-		//	widget.justCreated = true;
-		//
-		//	widgets.insert({name, widget});
-		//	return false;
-		//}
-		//else
-		//{
-		//	if (find->second.type != widgetType::button)
-		//	{
-		//		errorFunc("reupdated a widget with a different type");
-		//	}
-		//
-		//	if (find->second.usedThisFrame == true)
-		//	{
-		//		errorFunc("used a widget name twice");
-		//
-		//	}
-		//	find->second.usedThisFrame = true;
-		//	find->second.transform = transform;
-		//	find->second.colors = colors;
-		//	find->second.texture = texture;
-		//
-		//	return find->second.returnFromUpdate;
-		//}
-
+		
 	}
 
 	bool Toggle(std::string name, const gl2d::Color4f colors, bool* toggle, const gl2d::Texture texture, const gl2d::Texture overTexture)
@@ -692,6 +709,41 @@ namespace glui
 		idStr.pop_back();
 		idStr.pop_back();
 		idStr.pop_back();
+	}
+
+	int hash(const std::string &s)
+	{
+		unsigned int h = 0;
+		int pos = 0;
+		for (const auto i : s)
+		{
+			h += i*pos;
+			pos += 1;
+			pos %= 10;
+		}
+		return h;
+	}
+
+	void BeginMenu(std::string name)
+	{
+		Widget widget = {};
+		widget.type = widgetType::beginMenu;
+		widget.usedThisFrame = true;
+		widget.justCreated = true;
+		widgetsVector.push_back({name, widget});
+
+		PushId(hash(name));
+	}
+
+	void EndMenu()
+	{
+		Widget widget = {};
+		widget.type = widgetType::endMenu;
+		widget.usedThisFrame = true;
+		widget.justCreated = true;
+		widgetsVector.push_back({"", widget});
+
+		PopId();
 	}
 
 };

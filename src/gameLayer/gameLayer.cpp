@@ -65,12 +65,16 @@ bool gameLogic(float deltaTime)
 
 	glui::Button("test3##repeatHash", Colors_Magenta, texture);
 
-	glui::Button("test5", Colors_White, texture);
-	glui::Button("test7", Colors_White, texture);
+	glui::BeginMenu("menu");
+		glui::Button("test5", Colors_Red, texture);
+		glui::Button("test7", Colors_Red, texture);
+		glui::BeginMenu("menu2");
+			glui::Button("test5", Colors_Red, texture);
+			glui::Button("test7", Colors_Red, texture);
+		glui::EndMenu();
+	glui::EndMenu();
 	
-	glui::PushId(10);
-		glui::Text("test7", Colors_Turqoise);
-	glui::PopId();
+	glui::Text("test7", Colors_Turqoise);
 	
 
 	glui::Button("test8", Colors_Gray, texture);
