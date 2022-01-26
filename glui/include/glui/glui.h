@@ -28,4 +28,8 @@ namespace glui
 	bool Toggle(std::string name,
 		const gl2d::Color4f colors, bool* toggle, const gl2d::Texture texture = {}, const gl2d::Texture overTexture = {});
 
+	void Text(std::string name,
+		const gl2d::Color4f colors);
+
+
 };

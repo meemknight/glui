@@ -10,6 +10,7 @@ gl2d::Renderer2D renderer;
 
 gl2d::Font font;
 gl2d::Texture texture;
+gl2d::Texture tick;
 
 struct GameData
 {
@@ -23,6 +24,7 @@ bool initGame()
 	//font.createFromFile(RESOURCES_PATH "roboto_black.ttf");
 	font.createFromFile(RESOURCES_PATH "font/ANDYB.TTF");
 	texture.loadFromFile(RESOURCES_PATH "ui.png", true);
+	tick.loadFromFile(RESOURCES_PATH "tick.png", true);
 
 	if(!platform::readEntireFile(RESOURCES_PATH "gameData.data", &gameData, sizeof(GameData)))
 	{
@@ -61,12 +63,12 @@ bool gameLogic(float deltaTime)
 
 	glui::Button("test5", Colors_White, texture);
 	glui::Button("test6", Colors_White, texture);
-	glui::Button("test7", Colors_Gray, texture);
+	glui::Text("test7", Colors_Turqoise);
 	glui::Button("test8", Colors_Gray, texture);
 	glui::Button("test9", Colors_Gray, texture);
 
 	static bool t = false;
-	glui::Toggle("toggle", Colors_Gray, &t, texture, texture);
+	glui::Toggle("toggle", Colors_Gray, &t, texture, tick);
 
 
 #pragma region set finishing stuff
