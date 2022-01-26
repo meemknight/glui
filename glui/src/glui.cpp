@@ -169,6 +169,23 @@ namespace glui
 		}
 	}
 
+	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color)
+	{
+		glm::vec2 pos = glm::vec2(transform);
+
+		pos.x += transform.z / 2.f;
+		pos.y += transform.w / 2.f;
+
+		float s = 1.5;
+		auto size = renderer.getTextSize(str.c_str(), f, s);
+
+		float newSx = s * (transform.z * textFitX) / size.x;
+		float newSy = s * (transform.w * textFitY) / size.y;
+
+		float newS = std::min(newSx, newSy);
+
+		renderer.renderText(pos, str.c_str(), f, Colors_White, newS);
+	}
 
 	constexpr float inSizeY = 0.8;
 	constexpr float inSizeX = 0.5;
@@ -205,8 +222,6 @@ namespace glui
 		input.mouseHeld = mouseHeld;
 		input.mouseReleased = mouseReleased;
 		input.escapeReleased = escapeReleased;
-
-	
 		
 
 		for (auto& i : widgetsVector)
@@ -270,19 +285,7 @@ namespace glui
 
 						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
 
-						glm::vec2 pos = glm::vec2(transformDrawn);
-						pos.x += transformDrawn.z / 2.f;
-						pos.y += transformDrawn.w / 2.f;
-
-						float s = 1.5;
-						auto size = renderer.getTextSize(j.first.c_str(), font, s);
-
-						float newSx = s * (transformDrawn.z * textFitX) / size.x;
-						float newSy = s * (transformDrawn.w * textFitY) / size.y;
-
-						float newS = std::min(newSx, newSy);
-
-						renderer.renderText(pos, j.first.c_str(), font, Colors_White, newS);
+						renderText(renderer, j.first, font, transformDrawn, Colors_White);
 
 						break;
 					}
@@ -302,6 +305,13 @@ namespace glui
 							}
 						}
 
+						glm::vec4 toggleTransform = transformDrawn;
+						glm::vec4 textTransform = transformDrawn;
+
+						toggleTransform.z = toggleTransform.w;
+						textTransform.x += toggleTransform.w;
+						textTransform.x -= toggleTransform.w;
+
 						if (input.mouseReleased && aabb(computedPos, input.mousePos))
 						{
 							*(bool*)(widget.pointer) = !(*(bool*)(widget.pointer));
@@ -311,19 +321,22 @@ namespace glui
 
 						if (widget.returnFromUpdate)
 						{
-							auto small = transformDrawn;
+							auto small = toggleTransform;
 							small.z *= buttonFit;
 							small.w *= buttonFit;
-							small.x += transformDrawn.z * (1.f - buttonFit) / 2.f;
-							small.y += transformDrawn.w * (1.f - buttonFit) / 2.f;
+							small.x += toggleTransform.z * (1.f - buttonFit) / 2.f;
+							small.y += toggleTransform.w * (1.f - buttonFit) / 2.f;
 
-							renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+							renderFancyBox(renderer, toggleTransform, widget.colors, widget.texture, hovered, clicked);
 							renderFancyBox(renderer, small, widget.colors, widget.textureOver, false, false);
 						}
 						else
 						{
-							renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+							renderFancyBox(renderer, toggleTransform, widget.colors, widget.texture, hovered, clicked);
 						}
+
+						renderText(renderer, j.first, font, textTransform, Colors_White);
+
 
 						break;
 					}
