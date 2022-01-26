@@ -123,6 +123,8 @@ namespace glui
 
 	void renderFancyBox(gl2d::Renderer2D& renderer, glm::vec4 transform, glm::vec4 color, gl2d::Texture t, bool hovered, bool clicked)
 	{
+		if (color.a <= 0.01f) { return; }
+
 		float colorDim = 0.f;
 		if (hovered)
 		{
@@ -176,6 +178,29 @@ namespace glui
 		}
 	}
 
+	glm::vec4 determineTextPos(gl2d::Renderer2D& renderer, const std::string& str, gl2d::Font& f, glm::vec4 transform)
+	{
+		glm::vec2 pos = glm::vec2(transform);
+
+		pos.x += transform.z / 2.f;
+		pos.y += transform.w / 2.f;
+
+		float s = 1.5;
+		auto size = renderer.getTextSize(str.c_str(), f, s);
+
+		float newSx = s * (transform.z * textFitX) / size.x;
+		float newSy = s * (transform.w * textFitY) / size.y;
+
+		float newS = std::min(newSx, newSy);
+
+		glm::vec2 computedSize = renderer.getTextSize(str.c_str(), f, newS);
+		
+		pos.x -= computedSize.x / 2.f;
+		pos.y -= computedSize.y / 2.f;
+
+		return glm::vec4{pos, computedSize};
+	}
+
 	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color)
 	{
 		glm::vec2 pos = glm::vec2(transform);
@@ -191,7 +216,7 @@ namespace glui
 
 		float newS = std::min(newSx, newSy);
 
-		renderer.renderText(pos, str.c_str(), f, Colors_White, newS);
+		renderer.renderText(pos, str.c_str(), f, color, newS);
 	}
 
 	constexpr float inSizeY = 0.8;
@@ -215,8 +240,8 @@ namespace glui
 		float paddSizeX = sizeWithPaddX * (1 - inSizeX) / 2.f;
 
 		glm::vec4 computedPos;
-		computedPos.x = paddSizeX + (float)renderer.windowW * (1 - mainInSizeX) * 0.5;
-		computedPos.y = paddSizeY + (float)renderer.windowH * (1 - mainInSizeY) * 0.5;
+		computedPos.x = paddSizeX + (float)renderer.windowW * (1 - mainInSizeX) * 0.5f;
+		computedPos.y = paddSizeY + (float)renderer.windowH * (1 - mainInSizeY) * 0.5f;
 		computedPos.z = sizeX * mainInSizeX;
 		computedPos.w = sizeY * mainInSizeY;
 
@@ -268,10 +293,18 @@ namespace glui
 					case widgetType::button:
 					{
 						auto transformDrawn = computedPos;
+						auto aabbTransform = computedPos;
 						bool hovered = 0;
 						bool clicked = 0;
+						auto textColor = Colors_White;
 
-						if (aabb(computedPos, input.mousePos))
+						if (widget.colors.a <= 0.01f)
+						{
+							auto p = determineTextPos(renderer, j.first, font, transformDrawn);
+							aabbTransform = p;
+						}
+
+						if (aabb(aabbTransform, input.mousePos))
 						{
 							hovered = true;
 							if (input.mouseHeld)
@@ -281,7 +314,12 @@ namespace glui
 							}
 						}
 
-						if (input.mouseReleased && aabb(computedPos, input.mousePos))
+						if (hovered && widget.colors.a <= 0.01f)
+						{
+							textColor = stepColorDown(textColor, 0.8);
+						}
+
+						if (input.mouseReleased && aabb(aabbTransform, input.mousePos))
 						{
 							widget.returnFromUpdate = true;
 						}
@@ -292,7 +330,7 @@ namespace glui
 
 						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
 
-						renderText(renderer, j.first, font, transformDrawn, Colors_White);
+						renderText(renderer, j.first, font, transformDrawn, textColor);
 
 						break;
 					}

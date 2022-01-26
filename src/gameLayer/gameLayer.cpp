@@ -48,7 +48,7 @@ bool gameLogic(float deltaTime)
 	ImGui::ShowDemoWindow();
 
 
-	if (glui::Button("test", Colors_Orange, texture))
+	if (glui::Button("test", {0,0,0,0}))
 	{
 		std::cout << "yay\n";
 	};
