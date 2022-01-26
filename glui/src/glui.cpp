@@ -84,7 +84,9 @@ namespace glui
 	constexpr float shadowSize = 0.1f;
 	constexpr float outlineSize = 0.02f;
 	constexpr float textFitX = 0.9f;
+	constexpr float textFitXBig = 0.95f;
 	constexpr float textFitY = 0.7f;
+	constexpr float textFitYBig = 0.75f;
 	constexpr float buttonFit  = 0.6f;
 	
 	//glm::vec4 getShadowPos(glm::vec4 transform)
@@ -202,8 +204,17 @@ namespace glui
 		return glm::vec4{pos, computedSize};
 	}
 
-	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color)
+	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color, bool minimize = true)
 	{
+		float newFitX = textFitXBig;
+		float newFitY = textFitYBig;
+
+		if (minimize)
+		{
+			newFitX = textFitX;
+			newFitY = textFitY;
+		}
+
 		glm::vec2 pos = glm::vec2(transform);
 
 		pos.x += transform.z / 2.f;
@@ -212,8 +223,8 @@ namespace glui
 		float s = 1.5;
 		auto size = renderer.getTextSize(str.c_str(), f, s);
 
-		float newSx = s * (transform.z * textFitX) / size.x;
-		float newSy = s * (transform.w * textFitY) / size.y;
+		float newSx = s * (transform.z * newFitX) / size.x;
+		float newSy = s * (transform.w * newFitY) / size.y;
 
 		float newS = std::min(newSx, newSy);
 
@@ -255,7 +266,6 @@ namespace glui
 		input.mouseHeld = mouseHeld;
 		input.mouseReleased = mouseReleased;
 		input.escapeReleased = escapeReleased;
-		
 
 		for (auto& i : widgetsVector)
 		{
@@ -331,7 +341,15 @@ namespace glui
 
 						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
 
-						renderText(renderer, j.first, font, transformDrawn, textColor);
+						if (widget.colors.a <= 0.01f && hovered)
+						{
+							renderText(renderer, j.first, font, transformDrawn, textColor, false);
+						}
+						else
+						{
+							renderText(renderer, j.first, font, transformDrawn, textColor);
+						}
+
 
 						break;
 					}
@@ -341,29 +359,48 @@ namespace glui
 						bool hovered = 0;
 						bool clicked = 0;
 
-						if (aabb(computedPos, input.mousePos))
+						
+
+						glm::vec4 toggleTransform = transformDrawn;
+						glm::vec4 textTransform = transformDrawn;
+						textTransform.z -= toggleTransform.w;
+						toggleTransform.z = toggleTransform.w;
+
+						auto p = determineTextPos(renderer, j.first, font, textTransform);
+						toggleTransform.x = p.x + p.z;
+
+						glm::vec4 aabbBox = p;
+						aabbBox.z += toggleTransform.z;
+
+						if (aabb(aabbBox, input.mousePos))
 						{
 							hovered = true;
 							if (input.mouseHeld)
 							{
 								clicked = true;
-								transformDrawn.y += transformDrawn.w * pressDownSize;
+								textTransform.y += transformDrawn.w * pressDownSize;
+								toggleTransform.y += transformDrawn.w * pressDownSize;
 							}
 						}
 
-						glm::vec4 toggleTransform = transformDrawn;
-						glm::vec4 textTransform = transformDrawn;
-
-						toggleTransform.z = toggleTransform.w;
-						textTransform.x += toggleTransform.w;
-						textTransform.x -= toggleTransform.w;
-
-						if (input.mouseReleased && aabb(computedPos, input.mousePos))
+						if (input.mouseReleased && aabb(aabbBox, input.mousePos))
 						{
 							*(bool*)(widget.pointer) = !(*(bool*)(widget.pointer));
 						}
 
 						widget.returnFromUpdate = *(bool*)(widget.pointer);
+
+
+						if (hovered)
+						{
+							renderText(renderer, j.first, font, textTransform, stepColorDown(Colors_White, 0.8)
+								, false);
+						}
+						else
+						{
+							renderText(renderer, j.first, font, textTransform, Colors_White);
+						}
+						
 
 						if (widget.returnFromUpdate)
 						{
@@ -389,7 +426,6 @@ namespace glui
 							renderFancyBox(renderer, toggleTransform, widget.colors, widget.texture, hovered, clicked);
 						}
 
-						renderText(renderer, j.first, font, textTransform, Colors_White);
 
 
 						break;
