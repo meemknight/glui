@@ -65,12 +65,12 @@ bool gameLogic(float deltaTime)
 
 	glui::Button("test3##repeatHash", Colors_Magenta, texture);
 
-	glui::BeginMenu("menu");
+	glui::BeginMenu("settings", Colors_Yellow, texture);
 		glui::Button("test5", Colors_Red, texture);
 		glui::Button("test7", Colors_Red, texture);
-		glui::BeginMenu("menu2");
-			glui::Button("test5", Colors_Red, texture);
-			glui::Button("test7", Colors_Red, texture);
+		glui::BeginMenu("menu2", Colors_Yellow, texture);
+			glui::Button("test5", Colors_Orange, texture);
+			glui::Button("test7", Colors_Orange, texture);
 		glui::EndMenu();
 	glui::EndMenu();
 	
@@ -83,12 +83,13 @@ bool gameLogic(float deltaTime)
 	static bool t = false;
 	glui::Toggle("toggle", Colors_Gray, &t, texture, tick);
 
+	//std::cout << platform::isKeyReleased(platform::Button::Q) << "\n";
 
 #pragma region set finishing stuff
 
 	glui::renderFrame(renderer, font, platform::getRelMousePosition(),
 		platform::isLMousePressed(), platform::isLMouseHeld(), platform::isLMouseReleased(),
-		platform::isKeyReleased(platform::Button::Escape), platform::getTypedInput(), deltaTime);
+		platform::isRMouseReleased(), platform::getTypedInput(), deltaTime);
 
 	renderer.flush();
 

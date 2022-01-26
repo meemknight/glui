@@ -261,6 +261,13 @@ namespace glui
 	void renderFrame(gl2d::Renderer2D& renderer, gl2d::Font& font, glm::ivec2 mousePos, bool mouseClick,
 		bool mouseHeld, bool mouseReleased, bool escapeReleased, const std::string& typedInput, float deltaTime)
 	{
+		static std::vector<std::string> currentMenuStack;
+
+		if (escapeReleased && !currentMenuStack.empty())
+		{
+			currentMenuStack.pop_back();
+		}
+
 		timer += deltaTime*2;
 		if (timer >= 2.f)
 		{
@@ -270,30 +277,50 @@ namespace glui
 		std::vector<std::pair<std::string, Widget>> widgetsCopy;
 		widgetsCopy.reserve(widgetsVector.size());
 
+		auto currentMenuStackCopy = currentMenuStack;;
 		{
 			std::vector<std::string> menuStack;
-			static std::vector<std::string> currentMenuStack;
 
 			std::string nextMenu = "";
-			if (!currentMenuStack.empty())
+			bool shouldIgnor = false;
+
+			if (!currentMenuStackCopy.empty())
 			{
-				nextMenu = currentMenuStack.front();
+				nextMenu = currentMenuStackCopy.front();
+				currentMenuStackCopy.erase(currentMenuStackCopy.begin());
+				shouldIgnor = true;
 			}
 
-			bool shouldIgnor = false;
 			int nextStackSizeToLook = 0;
+			int nextStackSizeToLookMin = 0;
 
 			for (auto& i : widgetsVector)
 			{
+
 				if (i.second.type == widgetType::beginMenu)
 				{
 					menuStack.push_back(i.first);
 
-					if (i.first != nextMenu)
+					if (i.first == nextMenu)
+					{
+						if (!currentMenuStackCopy.empty())
+						{
+							nextMenu = currentMenuStackCopy.front();
+							currentMenuStackCopy.erase(currentMenuStackCopy.begin());
+						}
+						else
+						{
+							shouldIgnor = false;
+							nextStackSizeToLookMin = menuStack.size();
+						}
+					}else
+					if (i.first != nextMenu && shouldIgnor != true)
 					{
 						shouldIgnor = true;
 						nextStackSizeToLook = menuStack.size() - 1;
+						widgetsCopy.push_back(i);
 					}
+					
 					continue;
 				}
 
@@ -306,6 +333,12 @@ namespace glui
 					{
 						shouldIgnor = false;
 					}
+
+					if (menuStack.size() < nextStackSizeToLookMin)
+					{
+						shouldIgnor = true;
+					}
+
 					continue;
 				}
 
@@ -377,56 +410,64 @@ namespace glui
 				auto &j = *widgets.find(i.first);
 				auto& widget = j.second;
 
+				auto drawButton = [&]()
+				{
+					auto transformDrawn = computedPos;
+					auto aabbTransform = computedPos;
+					bool hovered = 0;
+					bool clicked = 0;
+					auto textColor = Colors_White;
+
+					if (widget.colors.a <= 0.01f)
+					{
+						auto p = determineTextPos(renderer, j.first, font, transformDrawn);
+						aabbTransform = p;
+					}
+
+					if (aabb(aabbTransform, input.mousePos))
+					{
+						hovered = true;
+						if (input.mouseHeld)
+						{
+							clicked = true;
+							transformDrawn.y += transformDrawn.w * pressDownSize;
+						}
+					}
+
+					if (hovered && widget.colors.a <= 0.01f)
+					{
+						textColor = stepColorDown(textColor, 0.8);
+					}
+
+					if (input.mouseReleased && aabb(aabbTransform, input.mousePos))
+					{
+						widget.returnFromUpdate = true;
+					}
+					else
+					{
+						widget.returnFromUpdate = false;
+					}
+
+					renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
+
+					if (widget.colors.a <= 0.01f && hovered)
+					{
+						renderText(renderer, j.first, font, transformDrawn, textColor, false);
+					}
+					else
+					{
+						renderText(renderer, j.first, font, transformDrawn, textColor);
+					}
+
+					return widget.returnFromUpdate;
+				};
+
 				switch (widget.type)
 				{
 					case widgetType::button:
 					{
-						auto transformDrawn = computedPos;
-						auto aabbTransform = computedPos;
-						bool hovered = 0;
-						bool clicked = 0;
-						auto textColor = Colors_White;
-
-						if (widget.colors.a <= 0.01f)
-						{
-							auto p = determineTextPos(renderer, j.first, font, transformDrawn);
-							aabbTransform = p;
-						}
-
-						if (aabb(aabbTransform, input.mousePos))
-						{
-							hovered = true;
-							if (input.mouseHeld)
-							{
-								clicked = true;
-								transformDrawn.y += transformDrawn.w * pressDownSize;
-							}
-						}
-
-						if (hovered && widget.colors.a <= 0.01f)
-						{
-							textColor = stepColorDown(textColor, 0.8);
-						}
-
-						if (input.mouseReleased && aabb(aabbTransform, input.mousePos))
-						{
-							widget.returnFromUpdate = true;
-						}
-						else
-						{
-							widget.returnFromUpdate = false;
-						}
-
-						renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
-
-						if (widget.colors.a <= 0.01f && hovered)
-						{
-							renderText(renderer, j.first, font, transformDrawn, textColor, false);
-						}
-						else
-						{
-							renderText(renderer, j.first, font, transformDrawn, textColor);
-						}
+						
+						drawButton();
 
 						break;
 					}
@@ -561,7 +602,16 @@ namespace glui
 
 						break;
 					}
+					case widgetType::beginMenu:
+					{
 
+						if (drawButton()) 
+						{
+							currentMenuStack.push_back(i.first);
+						};
+
+						break;
+					}
 
 				}
 
@@ -724,10 +774,12 @@ namespace glui
 		return h;
 	}
 
-	void BeginMenu(std::string name)
+	void BeginMenu(std::string name, const gl2d::Color4f colors, const gl2d::Texture texture)
 	{
 		Widget widget = {};
 		widget.type = widgetType::beginMenu;
+		widget.colors = colors;
+		widget.texture = texture;
 		widget.usedThisFrame = true;
 		widget.justCreated = true;
 		widgetsVector.push_back({name, widget});

@@ -40,7 +40,7 @@ namespace glui
 
 	void PopId();
 
-	void BeginMenu(std::string name);
+	void BeginMenu(std::string name, const gl2d::Color4f colors, const gl2d::Texture texture);
 	void EndMenu();
 
 };
