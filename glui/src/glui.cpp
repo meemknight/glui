@@ -487,6 +487,8 @@ namespace glui
 
 						glm::vec4 aabbBox = p;
 						aabbBox.z += toggleTransform.z;
+						aabbBox.y = std::min(toggleTransform.y, textTransform.y);
+						aabbBox.w = std::max(toggleTransform.w, textTransform.w);
 
 						if (aabb(aabbBox, input.mousePos))
 						{

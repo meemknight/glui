@@ -50,38 +50,37 @@ bool gameLogic(float deltaTime)
 	ImGui::ShowDemoWindow();
 
 
-	if (glui::Button("test", {0,0,0,0}))
+	glui::Text("Terarria", Colors_Gray);
+
+	if (glui::Button("Play", Colors_Blue, texture))
 	{
-		std::cout << "yay\n";
-	};
+		//play
+	}
 
-	static char text[30];
-	static char text2[30];
+	glui::BeginMenu("settings", Colors_Gray, texture);
+		glui::BeginMenu("volume settings", Colors_Gray, texture);
+			static bool sound = true;
+			static bool music = true;
+			glui::Toggle("sound", Colors_Gray, &sound, texture, tick);
+			glui::Toggle("music", Colors_Gray, &music, texture, tick);
+		glui::EndMenu();
 
-	glui::InputText("test2\ntest2", text, sizeof(text));
-	glui::InputText("test2\ntest3", text2, sizeof(text2), Colors_Gray, texture);
-
-	glui::Button("test3##hash", Colors_Turqoise, texture);
-
-	glui::Button("test3##repeatHash", Colors_Magenta, texture);
-
-	glui::BeginMenu("settings", Colors_Yellow, texture);
-		glui::Button("test5", Colors_Red, texture);
-		glui::Button("test7", Colors_Red, texture);
-		glui::BeginMenu("menu2", Colors_Yellow, texture);
-			glui::Button("test5", Colors_Orange, texture);
-			glui::Button("test7", Colors_Orange, texture);
+		glui::BeginMenu("video settings", Colors_Gray, texture);
+			static bool vSync = true;
+			static bool shadows = true;
+			glui::Toggle("vSync", Colors_Gray, &vSync, texture, tick);
+			glui::Toggle("shadows", Colors_Gray, &shadows, texture, tick);
 		glui::EndMenu();
 	glui::EndMenu();
-	
-	glui::Text("test7", Colors_Turqoise);
-	
 
-	glui::Button("test8", Colors_Gray, texture);
-	glui::Button("test9", Colors_Gray, texture);
+	glui::BeginMenu("create new world", Colors_Gray, texture);
+		glui::Text("Enter world name", Colors_Gray);
+		static char text[15];
+		glui::InputText("input", text, sizeof(text));
+		glui::Button("create", Colors_Gray, texture);
+	glui::EndMenu();
+	glui::Button("Exit", Colors_Red, texture);
 
-	static bool t = false;
-	glui::Toggle("toggle", Colors_Gray, &t, texture, tick);
 
 	//std::cout << platform::isKeyReleased(platform::Button::Q) << "\n";
 
