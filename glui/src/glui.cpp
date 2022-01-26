@@ -82,6 +82,8 @@ namespace glui
 
 	std::unordered_map<std::string, Widget> widgets;
 
+	std::string idStr;
+
 	constexpr float pressDownSize = 0.04f;
 	constexpr float shadowSize = 0.1f;
 	constexpr float outlineSize = 0.02f;
@@ -124,6 +126,16 @@ namespace glui
 		color.g *= perc;
 		color.b *= perc;
 		return color;
+	}
+
+	std::string getString(std::string s)
+	{
+		auto f = s.find("##");
+		if (f != s.npos)
+		{
+			s = std::string(s.begin(), s.begin() + f);
+		}
+		return s;
 	}
 
 	void renderFancyBox(gl2d::Renderer2D& renderer, glm::vec4 transform, glm::vec4 color, gl2d::Texture t, bool hovered, bool clicked)
@@ -185,20 +197,22 @@ namespace glui
 
 	glm::vec4 determineTextPos(gl2d::Renderer2D& renderer, const std::string& str, gl2d::Font& f, glm::vec4 transform)
 	{
+		auto newStr = getString(str);
+
 		glm::vec2 pos = glm::vec2(transform);
 
 		pos.x += transform.z / 2.f;
 		pos.y += transform.w / 2.f;
 
 		float s = 1.5;
-		auto size = renderer.getTextSize(str.c_str(), f, s);
+		auto size = renderer.getTextSize(newStr.c_str(), f, s);
 
 		float newSx = s * (transform.z * textFitX) / size.x;
 		float newSy = s * (transform.w * textFitY) / size.y;
 
 		float newS = std::min(newSx, newSy);
 
-		glm::vec2 computedSize = renderer.getTextSize(str.c_str(), f, newS);
+		glm::vec2 computedSize = renderer.getTextSize(newStr.c_str(), f, newS);
 		
 		pos.x -= computedSize.x / 2.f;
 		pos.y -= computedSize.y / 2.f;
@@ -208,6 +222,8 @@ namespace glui
 
 	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color, bool minimize = true)
 	{
+		auto newStr = getString(str);
+
 		float newFitX = textFitXBig;
 		float newFitY = textFitYBig;
 
@@ -223,14 +239,14 @@ namespace glui
 		pos.y += transform.w / 2.f;
 
 		float s = 1.5;
-		auto size = renderer.getTextSize(str.c_str(), f, s);
+		auto size = renderer.getTextSize(newStr.c_str(), f, s);
 
 		float newSx = s * (transform.z * newFitX) / size.x;
 		float newSy = s * (transform.w * newFitY) / size.y;
 
 		float newS = std::min(newSx, newSy);
 
-		renderer.renderText(pos, str.c_str(), f, color, newS);
+		renderer.renderText(pos, newStr.c_str(), f, color, newS);
 	}
 
 	constexpr float inSizeY = 0.8;
@@ -506,11 +522,18 @@ namespace glui
 
 		widgetsVector.clear();
 
+		if (!idStr.empty())
+		{
+			errorFunc("More pushes than pops");
+		}
+		idStr.clear();
+
 	}
 
 	bool Button(std::string name, const gl2d::Color4f colors, const gl2d::Texture texture)
 	{
-		
+		name += idStr;
+
 		Widget widget = {};
 		widget.type = widgetType::button;
 		widget.colors = colors;
@@ -568,6 +591,8 @@ namespace glui
 
 	bool Toggle(std::string name, const gl2d::Color4f colors, bool* toggle, const gl2d::Texture texture, const gl2d::Texture overTexture)
 	{
+		name += idStr;
+
 		Widget widget = {};
 		widget.type = widgetType::toggle;
 		widget.colors = colors;
@@ -592,6 +617,8 @@ namespace glui
 
 	void Text(std::string name, const gl2d::Color4f colors)
 	{
+		name += idStr;
+
 		Widget widget = {};
 		widget.type = widgetType::text;
 		widget.colors = colors;
@@ -602,6 +629,8 @@ namespace glui
 
 	void glui::InputText(std::string name, char* text, size_t textSizeWithNullChar)
 	{
+		name += idStr;
+
 		Widget widget = {};
 		widget.type = widgetType::textInput;
 		widget.pointer = text;
@@ -609,6 +638,37 @@ namespace glui
 		widget.usedThisFrame = true;
 		widget.justCreated = true;
 		widgetsVector.push_back({name, widget});
+	}
+
+	void PushId(int id)
+	{
+		char a = *(((char*)&id) + 0);
+		char b = *(((char*)&id) + 1);
+		char c = *(((char*)&id) + 2);
+		char d = *(((char*)&id) + 3);
+
+		idStr.push_back('#');
+		idStr.push_back('#');
+		idStr.push_back(a);
+		idStr.push_back(b);
+		idStr.push_back(c);
+		idStr.push_back(d);
+	}
+
+	void PopId()
+	{
+		if (idStr.empty())
+		{
+			errorFunc("More pops than pushes");
+			return;
+		}
+
+		idStr.pop_back();
+		idStr.pop_back();
+		idStr.pop_back();
+		idStr.pop_back();
+		idStr.pop_back();
+		idStr.pop_back();
 	}
 
 };

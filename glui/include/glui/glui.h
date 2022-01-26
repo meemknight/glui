@@ -35,4 +35,8 @@ namespace glui
 	void InputText(std::string name,
 		char* text, size_t textSizeWithNullChar);
 
+	void PushId(int id);
+
+	void PopId();
+
 };
