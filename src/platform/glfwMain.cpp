@@ -175,6 +175,19 @@ void characterCallback(GLFWwindow *window, unsigned int codepoint)
 	}
 }
 
+void keyCallbackType(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if ((action == GLFW_REPEAT || action == GLFW_PRESS) && (key < 127 || key == GLFW_KEY_BACKSPACE))
+	{
+		if (key == GLFW_KEY_BACKSPACE)
+		{
+			key = 8;
+		}
+
+		platform::internal::addToTypedInput(key);
+	}
+}
+
 #pragma region platform functions
 
 GLFWwindow *wind = 0;
@@ -302,7 +315,8 @@ int main()
 	glfwSetWindowFocusCallback(wind, windowFocusCallback);
 	glfwSetWindowSizeCallback(wind, windowSizeCallback);
 	glfwSetCursorPosCallback(wind, cursorPositionCallback);
-	glfwSetCharCallback(wind, characterCallback);
+	//glfwSetCharCallback(wind, characterCallback);
+	glfwSetKeyCallback(wind, keyCallbackType);
 
 	permaAssertComment(gladLoadGL(), "err initializing glad");
 

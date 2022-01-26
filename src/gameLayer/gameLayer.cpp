@@ -55,7 +55,9 @@ bool gameLogic(float deltaTime)
 		std::cout << "yay\n";
 	};
 
-	glui::Button("test2\ntest2", Colors_Red, texture);
+	static char text[30];
+
+	glui::InputText("test2\ntest2", text, sizeof(text));
 
 	glui::Button("test3", Colors_Turqoise, texture);
 
@@ -75,7 +77,7 @@ bool gameLogic(float deltaTime)
 
 	glui::renderFrame(renderer, font, platform::getRelMousePosition(),
 		platform::isLMousePressed(), platform::isLMouseHeld(), platform::isLMouseReleased(),
-		platform::isKeyReleased(platform::Button::Escape));
+		platform::isKeyReleased(platform::Button::Escape), platform::getTypedInput());
 
 	renderer.flush();
 

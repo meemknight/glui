@@ -33,6 +33,7 @@ namespace glui
 		button,
 		toggle,
 		text,
+		textInput,
 	};
 
 	struct InputData
@@ -56,6 +57,7 @@ namespace glui
 		gl2d::Texture textureOver = {};
 		bool returnFromUpdate = 0;
 		void* pointer = 0;
+		size_t textSize = 0;
 	};
 
 
@@ -236,7 +238,8 @@ namespace glui
 	constexpr float mainInSizeX = 0.9;
 	constexpr float mainInSizeY = 0.9;
 
-	void renderFrame(gl2d::Renderer2D& renderer, gl2d::Font& font, glm::ivec2 mousePos, bool mouseClick, bool mouseHeld, bool mouseReleased, bool escapeReleased)
+	void renderFrame(gl2d::Renderer2D& renderer, gl2d::Font& font, glm::ivec2 mousePos, bool mouseClick,
+		bool mouseHeld, bool mouseReleased, bool escapeReleased, const std::string& typedInput)
 	{
 		int countOnY = 0;
 		for (auto& i : widgetsVector)
@@ -350,7 +353,6 @@ namespace glui
 							renderText(renderer, j.first, font, transformDrawn, textColor);
 						}
 
-
 						break;
 					}
 					case widgetType::toggle:
@@ -358,8 +360,6 @@ namespace glui
 						auto transformDrawn = computedPos;
 						bool hovered = 0;
 						bool clicked = 0;
-
-						
 
 						glm::vec4 toggleTransform = transformDrawn;
 						glm::vec4 textTransform = transformDrawn;
@@ -437,6 +437,44 @@ namespace glui
 
 						break;
 					}
+					case widgetType::textInput:
+					{
+
+						char* text = (char*)j.second.pointer;
+						size_t n = j.second.textSize;
+
+						int pos = strlen(text);
+
+						for (auto i : typedInput)
+						{
+							if (i == 8) //backspace
+							{
+								if (pos > 0)
+								{
+									pos--;
+									text[pos] = 0;
+								}
+							}
+							else if (i == '\n')
+							{
+								//ignore
+							}
+							else
+							{
+								if (pos < n - 1)
+								{
+									text[pos] = i;
+									pos++;
+									text[pos] = 0;
+								}
+							}
+						}
+
+						renderText(renderer, text, font, computedPos, Colors_White);
+
+						break;
+					}
+
 
 				}
 
@@ -557,6 +595,17 @@ namespace glui
 		Widget widget = {};
 		widget.type = widgetType::text;
 		widget.colors = colors;
+		widget.usedThisFrame = true;
+		widget.justCreated = true;
+		widgetsVector.push_back({name, widget});
+	}
+
+	void glui::InputText(std::string name, char* text, size_t textSizeWithNullChar)
+	{
+		Widget widget = {};
+		widget.type = widgetType::textInput;
+		widget.pointer = text;
+		widget.textSize = textSizeWithNullChar;
 		widget.usedThisFrame = true;
 		widget.justCreated = true;
 		widgetsVector.push_back({name, widget});

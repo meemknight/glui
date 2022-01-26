@@ -18,7 +18,8 @@ namespace glui
 	bool mouseClick,
 	bool mouseHeld,
 	bool mouseReleased,
-	bool escapeReleased
+	bool escapeReleased,
+	const std::string &typedInput
 	);
 
 
@@ -31,5 +32,7 @@ namespace glui
 	void Text(std::string name,
 		const gl2d::Color4f colors);
 
+	void InputText(std::string name,
+		char* text, size_t textSizeWithNullChar);
 
 };
