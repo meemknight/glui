@@ -52,7 +52,7 @@ bool gameLogic(float deltaTime)
 
 	glui::Text("Terarria", Colors_Gray);
 
-	if (glui::Button("Play", Colors_Transparent, texture))
+	if (glui::Button("Play", Colors_Green, texture))
 	{
 		//play
 	}
@@ -73,7 +73,7 @@ bool gameLogic(float deltaTime)
 		glui::EndMenu();
 	glui::EndMenu();
 
-	glui::BeginMenu("create new world", Colors_Transparent, texture);
+	glui::BeginMenu("create new world", Colors_Green, texture);
 		glui::Text("Enter world name", Colors_Gray);
 		static char text[15];
 		glui::InputText("input", text, sizeof(text));

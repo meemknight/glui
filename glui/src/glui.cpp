@@ -194,9 +194,19 @@ namespace glui
 		}
 	}
 
-	glm::vec4 determineTextPos(gl2d::Renderer2D& renderer, const std::string& str, gl2d::Font& f, glm::vec4 transform)
+	glm::vec4 determineTextPos(gl2d::Renderer2D& renderer, const std::string& str, gl2d::Font& f, glm::vec4 transform,
+		bool noTexture, bool minimize = true)
 	{
 		auto newStr = getString(str);
+
+		float newFitX = textFitXBig;
+		float newFitY = textFitYBig;
+
+		if (minimize)
+		{
+			newFitX = textFitX;
+			newFitY = textFitY;
+		}
 
 		glm::vec2 pos = glm::vec2(transform);
 
@@ -206,10 +216,15 @@ namespace glui
 		float s = 1.5;
 		auto size = renderer.getTextSize(newStr.c_str(), f, s);
 
-		float newSx = s * (transform.z * textFitX) / size.x;
-		float newSy = s * (transform.w * textFitY) / size.y;
+		float newSx = s * (transform.z * newFitX) / size.x;
+		float newSy = s * (transform.w * newFitY) / size.y;
 
 		float newS = std::min(newSx, newSy);
+		if (noTexture)
+		{
+			newS = std::max(newSx, newSy);
+		}
+		newS = std::min(1.f, newS);
 
 		glm::vec2 computedSize = renderer.getTextSize(newStr.c_str(), f, newS);
 		
@@ -219,6 +234,7 @@ namespace glui
 		return glm::vec4{pos, computedSize};
 	}
 
+	//todo reuse the upper function
 	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color, 
 		bool noTexture, bool minimize = true)
 	{
@@ -420,7 +436,7 @@ namespace glui
 
 					if (widget.colors.a <= 0.01f)
 					{
-						auto p = determineTextPos(renderer, j.first, font, transformDrawn);
+						auto p = determineTextPos(renderer, j.first, font, transformDrawn, true);
 						aabbTransform = p;
 					}
 
@@ -483,7 +499,7 @@ namespace glui
 						textTransform.z -= toggleTransform.w;
 						toggleTransform.z = toggleTransform.w;
 
-						auto p = determineTextPos(renderer, j.first, font, textTransform);
+						auto p = determineTextPos(renderer, j.first, font, textTransform, true);
 						toggleTransform.x = p.x + p.z;
 
 						glm::vec4 aabbBox = p;
@@ -617,7 +633,6 @@ namespace glui
 					}
 
 				}
-
 
 				widget.justCreated = false;
 				widget.lastFrameData = input;
