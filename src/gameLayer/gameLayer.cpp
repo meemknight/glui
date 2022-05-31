@@ -36,6 +36,81 @@ bool initGame()
 	return true;
 }
 
+void render1()
+{
+	glui::Begin(6996);
+		glui::Text("Terarria", Colors_Gray);
+
+		if (glui::Button("Play", Colors_Green, texture))
+		{
+			//play
+		}
+
+		glui::BeginMenu("settings", Colors_Transparent, texture);
+			glui::BeginMenu("volume settings", Colors_Transparent, texture);
+				static bool sound = true;
+				static bool music = true;
+				glui::Toggle("sound", Colors_Gray, &sound, texture, tick);
+				glui::Toggle("music", Colors_Gray, &music, texture, tick);
+			glui::EndMenu();
+
+			glui::BeginMenu("video settings", Colors_Transparent, texture);
+				static bool vSync = true;
+				static bool shadows = true;
+				glui::Toggle("vSync", Colors_Gray, &vSync, texture, tick);
+				glui::Toggle("shadows", Colors_Gray, &shadows, texture, tick);
+			glui::EndMenu();
+		glui::EndMenu();
+
+		glui::BeginMenu("create new world", Colors_Green, texture);
+			glui::Text("Enter world name", Colors_Gray);
+			static char text[15];
+			glui::InputText("input", text, sizeof(text));
+			glui::Button("create", Colors_Transparent, texture);
+		glui::EndMenu();
+		glui::Button("Exit", Colors_Transparent, texture);
+	glui::End();
+}
+
+void render2()
+{
+	glui::Begin(100);
+		glui::Text("Minicraft", Colors_Blue);
+
+		if (glui::Button("Play", Colors_Green, texture))
+		{
+			//play
+		}
+
+		glui::BeginMenu("settings", Colors_Transparent, texture);
+			glui::BeginMenu("vsync settings", Colors_Transparent, texture);
+				glui::Text("vsync stuff##test", Colors_White);
+			glui::EndMenu();
+
+			glui::BeginMenu("video settings", Colors_Transparent, texture);
+				static bool vSync = true;
+				static bool shadows = true;
+				glui::Toggle("vSync", Colors_Gray, &vSync, texture, tick);
+				glui::Toggle("shadows", Colors_Gray, &shadows, texture, tick);
+			glui::EndMenu();
+		glui::EndMenu();
+
+		glui::BeginMenu("Create new world", Colors_Green, texture);
+			glui::Text("Enter world name", Colors_Gray);
+			static char text[15];
+			glui::InputText("input", text, sizeof(text));
+			glui::Button("create", Colors_Transparent, texture);
+		glui::EndMenu();
+		glui::Button("Exit...", Colors_Gray, texture);
+	
+	glui::End();
+
+
+}
+
+
+bool change = 0;
+
 bool gameLogic(float deltaTime)
 {
 #pragma region init stuff
@@ -49,40 +124,20 @@ bool gameLogic(float deltaTime)
 
 	ImGui::ShowDemoWindow();
 
-
-	glui::Text("Terarria", Colors_Gray);
-
-	if (glui::Button("Play", Colors_Green, texture))
+	if (change)
 	{
-		//play
+		render2();
+	}
+	else
+	{
+		render1();
 	}
 
-	glui::BeginMenu("settings", Colors_Transparent, texture);
-		glui::BeginMenu("volume settings", Colors_Transparent, texture);
-			static bool sound = true;
-			static bool music = true;
-			glui::Toggle("sound", Colors_Gray, &sound, texture, tick);
-			glui::Toggle("music", Colors_Gray, &music, texture, tick);
-		glui::EndMenu();
 
-		glui::BeginMenu("video settings", Colors_Transparent, texture);
-			static bool vSync = true;
-			static bool shadows = true;
-			glui::Toggle("vSync", Colors_Gray, &vSync, texture, tick);
-			glui::Toggle("shadows", Colors_Gray, &shadows, texture, tick);
-		glui::EndMenu();
-	glui::EndMenu();
-
-	glui::BeginMenu("create new world", Colors_Green, texture);
-		glui::Text("Enter world name", Colors_Gray);
-		static char text[15];
-		glui::InputText("input", text, sizeof(text));
-		glui::Button("create", Colors_Transparent, texture);
-	glui::EndMenu();
-	glui::Button("Exit", Colors_Transparent, texture);
-
-
-	//std::cout << platform::isKeyReleased(platform::Button::Q) << "\n";
+	if (platform::isKeyReleased(platform::Button::Q))
+	{
+		change = !change;
+	}
 
 #pragma region set finishing stuff
 

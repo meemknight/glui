@@ -62,7 +62,6 @@ namespace glui
 		size_t textSize = 0;
 	};
 
-
 	bool aabb(glm::vec4 transform, glm::vec2 point)
 	{
 		if (
@@ -273,11 +272,28 @@ namespace glui
 
 
 	float timer=0;
+	int currentId = 0;
+	bool idWasSet = 0;
+
+	std::unordered_map<int, std::vector<std::string>> allMenuStacks;
 
 	void renderFrame(gl2d::Renderer2D& renderer, gl2d::Font& font, glm::ivec2 mousePos, bool mouseClick,
 		bool mouseHeld, bool mouseReleased, bool escapeReleased, const std::string& typedInput, float deltaTime)
 	{
-		static std::vector<std::string> currentMenuStack;
+		if (!idWasSet)
+		{
+			return;
+		}
+		//find the menu stack for this Begin()
+		auto iterMenuStack = allMenuStacks.find(currentId);
+		if (iterMenuStack == allMenuStacks.end())
+		{
+			iterMenuStack = allMenuStacks.insert({currentId, {}}).first;
+		}
+		auto &currentMenuStack = iterMenuStack->second;
+
+		idWasSet = 0;
+		currentId = 0;
 
 		if (escapeReleased && !currentMenuStack.empty())
 		{
@@ -763,11 +779,37 @@ namespace glui
 		idStr.push_back(d);
 	}
 
-	void PopId()
+	void PushIdInternal(int id)
 	{
+		idStr.push_back('#');
+		PushId(id);
+	}
+
+	void PopIdInternal()
+	{
+		PopId();
+
 		if (idStr.empty())
 		{
-			errorFunc("More pops than pushes");
+			errorFunc("More pops than pushes or inconsistent usage of begin end");
+			return;
+		}
+		else
+		{
+			if (idStr.back() != '#')
+			{
+				errorFunc("Inconsistent usage of begin end push pop");
+				return;
+			}
+			idStr.pop_back();
+		}
+	}
+
+	void PopId()
+	{
+		if (idStr.size() < 6)
+		{
+			errorFunc("More pops than pushes or inconsistent usage of begin end");
 			return;
 		}
 
@@ -802,7 +844,7 @@ namespace glui
 		widget.justCreated = true;
 		widgetsVector.push_back({name, widget});
 
-		PushId(hash(name));
+		PushIdInternal(hash(name));
 	}
 
 	void EndMenu()
@@ -813,7 +855,39 @@ namespace glui
 		widget.justCreated = true;
 		widgetsVector.push_back({"", widget});
 
-		PopId();
+		PopIdInternal();
+	}
+
+	//todo change ids to be unsigned and long + better hahs function
+
+	void Begin(int id)
+	{
+		if (!idWasSet)
+		{
+			idWasSet = true;
+			currentId = id;
+		}
+		else
+		{
+			if (currentId == id)
+			{
+				errorFunc("Forgot to call renderFrame or more than one begin this frame");
+			}
+			else
+			{
+				errorFunc("More than one begin this frame");
+			}
+		}
+
+		//will still push even if id was set so we don't get errors from inconsistent pushes
+		PushIdInternal(id);
+	}
+
+	void End()
+	{
+
+		PopIdInternal();
+		
 	}
 
 };

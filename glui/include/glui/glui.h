@@ -23,7 +23,6 @@ namespace glui
 	float deltaTime
 	);
 
-
 	bool Button(std::string name,
 		const gl2d::Color4f colors, const gl2d::Texture texture = {});
 
@@ -42,5 +41,8 @@ namespace glui
 
 	void BeginMenu(std::string name, const gl2d::Color4f colors, const gl2d::Texture texture);
 	void EndMenu();
+
+	void Begin(int id);
+	void End();
 
 };
