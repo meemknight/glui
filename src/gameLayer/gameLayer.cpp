@@ -10,6 +10,7 @@ gl2d::Renderer2D renderer;
 
 gl2d::Font font;
 gl2d::Texture texture;
+gl2d::Texture terrariaTexture;
 gl2d::Texture tick;
 
 struct GameData
@@ -24,6 +25,7 @@ bool initGame()
 	//font.createFromFile(RESOURCES_PATH "roboto_black.ttf");
 	font.createFromFile(RESOURCES_PATH "font/ANDYB.TTF");
 	texture.loadFromFile(RESOURCES_PATH "ui.png", true);
+	terrariaTexture.loadFromFile(RESOURCES_PATH "terraria.png");
 	tick.loadFromFile(RESOURCES_PATH "tick.png", true);
 
 	if(!platform::readEntireFile(RESOURCES_PATH "gameData.data", &gameData, sizeof(GameData)))
@@ -39,9 +41,17 @@ bool initGame()
 void render1()
 {
 	glui::Begin(6996);
-		glui::Text("Terarria", Colors_Gray);
+		//glui::Text("Terraria", Colors_Gray);
+		glui::Texture(terrariaTexture);
+		glui::Texture(terrariaTexture);
+		glui::Texture(terrariaTexture);
 
-		if (glui::Button("Play", Colors_Green, texture))
+		if (glui::Button("Play", Colors_Green))
+		{
+			//play
+		}
+
+		if (glui::ButtonWithTexture(1, terrariaTexture))
 		{
 			//play
 		}

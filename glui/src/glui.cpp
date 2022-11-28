@@ -36,6 +36,8 @@ namespace glui
 		textInput,
 		beginMenu,
 		endMenu,
+		texture,
+		buttonWithTexture,
 	};
 
 	struct InputData
@@ -57,6 +59,7 @@ namespace glui
 		gl2d::Color4f colors = Colors_White;
 		gl2d::Texture texture = {};
 		gl2d::Texture textureOver = {};
+		glm::vec4 textureCoords = {};
 		bool returnFromUpdate = 0;
 		void* pointer = 0;
 		size_t textSize = 0;
@@ -248,16 +251,16 @@ namespace glui
 			newFitY = textFitY;
 		}
 
+		float s = 1.5;
+		auto size = renderer.getTextSize(newStr.c_str(), f, s);
+		float newSx = s * (transform.z * newFitX) / size.x;
+		float newSy = s * (transform.w * newFitY) / size.y;
+
 		glm::vec2 pos = glm::vec2(transform);
 
 		pos.x += transform.z / 2.f;
 		pos.y += transform.w / 2.f;
-
-		float s = 1.5;
-		auto size = renderer.getTextSize(newStr.c_str(), f, s);
-
-		float newSx = s * (transform.z * newFitX) / size.x;
-		float newSy = s * (transform.w * newFitY) / size.y;
+		
 
 		float newS = std::min(newSx, newSy);
 		if (noTexture)
@@ -268,6 +271,52 @@ namespace glui
 		newS = std::min(1.f, newS);
 
 		renderer.renderText(pos, newStr.c_str(), f, color, newS);
+	}
+
+	glm::vec4 computeTextureNewPosition(glm::vec4 transform, gl2d::Texture t)
+	{
+		auto tsize = t.GetSize();
+
+		if (tsize.y == 0) { return {}; }
+		if (transform.w == 0) { return {}; }
+
+		float aspectRatio = tsize.x / (float)tsize.y;
+		float boxAspectRatio = transform.z / transform.w;
+
+		if (aspectRatio < boxAspectRatio) // the texture is shorter than the box 
+		{
+			glm::vec2 newSize = {};
+			newSize.y = transform.w;
+			newSize.x = aspectRatio * newSize.y;
+
+			glm::vec4 newPos = {transform.x, transform.y, newSize};
+			newPos.x += (transform.z - newSize.x) / 2.f;
+
+			return newPos;
+		}
+		else if (aspectRatio > boxAspectRatio) //the texture is longer than the box
+		{
+			glm::vec2 newSize = {};
+			newSize.x = transform.z;
+			newSize.y = newSize.x / aspectRatio;
+
+			glm::vec4 newPos = {transform.x, transform.y, newSize};
+			newPos.y += (transform.w - newSize.y) / 2.f;
+			
+			return newPos;
+		}
+		else // if (aspectRatio == boxAspectRatio) // redundant
+		{
+			return transform;
+		}
+	}
+
+	void renderTexture(gl2d::Renderer2D &renderer, glm::vec4 transform, gl2d::Texture t, gl2d::Color4f c, glm::vec4 textureCoordonates)
+	{
+		auto newPos = computeTextureNewPosition(transform, t);
+
+		renderer.renderRectangle(newPos, c,
+			{}, 0.f, t);
 	}
 
 
@@ -423,17 +472,21 @@ namespace glui
 				
 				//continue;
 			}
-			else
+			else 
 			{
-				if (find->second.type != i.second.type)
+				if (i.first != "##$texture")
 				{
-					errorFunc("reupdated a widget with a different type");
+					if (find->second.type != i.second.type)
+					{
+						errorFunc("reupdated a widget with a different type");
+					}
+
+					if (find->second.usedThisFrame == true)
+					{
+						errorFunc("used a widget name twice");
+					}
 				}
-			
-				if (find->second.usedThisFrame == true)
-				{
-					errorFunc("used a widget name twice");
-				}
+
 				find->second.usedThisFrame = true;
 				//continue;
 			}
@@ -648,6 +701,54 @@ namespace glui
 						break;
 					}
 
+					case widgetType::texture:
+					{
+
+						renderTexture(renderer, computedPos, j.second.texture, j.second.colors,
+							j.second.textureCoords);
+
+						break;
+					}
+
+					case widgetType::buttonWithTexture:
+					{
+						bool hovered = false;
+						bool clicked = false;
+						glm::vec4 transformDrawn = computeTextureNewPosition(computedPos, j.second.texture);
+						glm::vec4 aabbPos = transformDrawn;
+						glm::vec4 color = j.second.colors;
+
+
+						if (aabb(aabbPos, input.mousePos))
+						{
+							hovered = true;
+							if (input.mouseHeld)
+							{
+								clicked = true;
+								transformDrawn.y += transformDrawn.w * pressDownSize;
+							}
+						}
+
+						if (hovered)
+						{
+							color = stepColorDown(color, 0.8);
+						}
+
+						if (input.mouseReleased && aabb(aabbPos, input.mousePos))
+						{
+							widget.returnFromUpdate = true;
+						}
+						else
+						{
+							widget.returnFromUpdate = false;
+						}
+
+						renderTexture(renderer, transformDrawn, j.second.texture, color,
+							j.second.textureCoords);
+
+						break;
+					}
+
 				}
 
 				widget.justCreated = false;
@@ -708,6 +809,45 @@ namespace glui
 			return false;
 		}
 		
+	}
+
+	void Texture(gl2d::Texture t, gl2d::Color4f colors, glm::vec4 textureCoords)
+	{
+		Widget widget = {};
+		widget.type = widgetType::texture;
+		widget.texture = t;
+		widget.colors = colors;
+		widget.textureCoords = textureCoords;
+		widget.usedThisFrame = true;
+		widget.justCreated = true;
+
+		widgetsVector.push_back({"##$texture", widget});
+	}
+
+	bool ButtonWithTexture(int id, gl2d::Texture t, gl2d::Color4f colors, glm::vec4 textureCoords)
+	{
+		Widget widget = {};
+		widget.type = widgetType::buttonWithTexture;
+		widget.texture = t;
+		widget.colors = colors;
+		widget.textureCoords = textureCoords;
+		widget.usedThisFrame = true;
+		widget.justCreated = true;
+
+		std::string name = "##$textureWithId:" + std::to_string(id);
+
+		widgetsVector.push_back({name, widget});
+
+		auto find = widgets.find(name);
+		if (find != widgets.end())
+		{
+			return find->second.returnFromUpdate;
+		}
+		else
+		{
+			return false;
+		}
+
 	}
 
 	bool Toggle(std::string name, const gl2d::Color4f colors, bool* toggle, const gl2d::Texture texture, const gl2d::Texture overTexture)

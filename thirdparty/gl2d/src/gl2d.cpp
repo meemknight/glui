@@ -1112,10 +1112,8 @@ namespace gl2d
 		}
 
 		glm::vec2 position = {};
-
 		const int text_length = (int)strlen(text);
-		Rect rectangle;
-		rectangle.x = position.x;
+		Rect rectangle = {};
 		float linePositionY = position.y;
 
 		//This is the y position we render at because it advances when we encounter newlines
