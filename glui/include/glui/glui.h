@@ -26,7 +26,7 @@ namespace glui
 	bool Button(std::string name,
 		const gl2d::Color4f colors, const gl2d::Texture texture = {});
 
-	void Texture(gl2d::Texture t, gl2d::Color4f colors = {1,1,1,1}, glm::vec4 textureCoords = {0,1,1,0});
+	void Texture(int id, gl2d::Texture t, gl2d::Color4f colors = {1,1,1,1}, glm::vec4 textureCoords = {0,1,1,0});
 
 	bool ButtonWithTexture(int id, gl2d::Texture t, gl2d::Color4f colors = {1,1,1,1}, glm::vec4 textureCoords = {0,1,1,0});
 
@@ -45,6 +45,8 @@ namespace glui
 
 	void colorPicker(std::string name, float *color3Component, gl2d::Texture sliderTexture = {},
 		gl2d::Texture ballTexture = {});
+
+	void newColum(int id);
 
 	void PushId(int id);
 

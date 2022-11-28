@@ -41,6 +41,7 @@ namespace glui
 		buttonWithTexture,
 		sliderFloatW,
 		colorPickerW,
+		newColumW,
 	};
 
 	struct InputData
@@ -68,9 +69,14 @@ namespace glui
 		void *pointer = 0;
 		float min = 0;
 		float max = 0;
-		bool sliderBeingDragged = 0;
-		bool sliderBeingDragged2 = 0;
-		bool sliderBeingDragged3 = 0;
+
+		struct PersistentData
+		{
+			bool sliderBeingDragged = 0;
+			bool sliderBeingDragged2 = 0;
+			bool sliderBeingDragged3 = 0;
+		}pd;
+
 		size_t textSize = 0;
 	};
 
@@ -449,7 +455,7 @@ namespace glui
 		std::vector<std::pair<std::string, Widget>> widgetsCopy;
 		widgetsCopy.reserve(widgetsVector.size());
 
-		auto currentMenuStackCopy = currentMenuStack;;
+		auto currentMenuStackCopy = currentMenuStack;
 		{
 			std::vector<std::string> menuStack;
 
@@ -520,22 +526,70 @@ namespace glui
 				}
 
 				widgetsCopy.push_back(i);
+			
 			}
 		};
 
-		float sizeWithPaddY = ((float)renderer.windowH / widgetsCopy.size());
-		float sizeY = sizeWithPaddY * inSizeY;
-		float paddSizeY = sizeWithPaddY * (1 - inSizeY) / 2.f;
+		auto computePos = [&](int elementsHeight, float &advanceSizeY)
+		{
+			float sizeWithPaddY = ((float)renderer.windowH / elementsHeight);
+			float sizeY = sizeWithPaddY * inSizeY;
+			float paddSizeY = sizeWithPaddY * (1 - inSizeY) / 2.f;
 
-		float sizeWithPaddX = (float)renderer.windowW;
-		float sizeX = sizeWithPaddX * inSizeX;
-		float paddSizeX = sizeWithPaddX * (1 - inSizeX) / 2.f;
+			float sizeWithPaddX = (float)renderer.windowW;
+			float sizeX = sizeWithPaddX * inSizeX;
+			float paddSizeX = sizeWithPaddX * (1 - inSizeX) / 2.f;
 
-		glm::vec4 computedPos;
-		computedPos.x = paddSizeX + (float)renderer.windowW * (1 - mainInSizeX) * 0.5f;
-		computedPos.y = paddSizeY + (float)renderer.windowH * (1 - mainInSizeY) * 0.5f;
-		computedPos.z = sizeX * mainInSizeX;
-		computedPos.w = sizeY * mainInSizeY;
+			glm::vec4 computedPos = {};
+			computedPos.x = paddSizeX + (float)renderer.windowW * (1 - mainInSizeX) * 0.5f;
+			computedPos.y = paddSizeY + (float)renderer.windowH * (1 - mainInSizeY) * 0.5f;
+			computedPos.z = sizeX * mainInSizeX;
+			computedPos.w = sizeY * mainInSizeY;
+
+			advanceSizeY = (paddSizeY * 2 + sizeY) * mainInSizeY;
+
+			return computedPos;
+		};
+
+		std::vector<std::pair<glm::vec4, float>> colums;
+
+		int widgetsCountUntillNewColumW = 0;
+
+		for (int i = 0; i < widgetsCopy.size(); i++)
+		{
+			if (widgetsCopy[i].second.type == glui::widgetType::newColumW)
+			{
+				float padd = 0;
+				auto rez = computePos(widgetsCountUntillNewColumW, padd);
+				colums.push_back({rez, padd});
+				widgetsCountUntillNewColumW = 0;
+			}
+			else
+			{
+				widgetsCountUntillNewColumW++;
+			}
+		}
+		if (widgetsCountUntillNewColumW != 0)
+		{
+			float padd = 0;
+			auto rez = computePos(widgetsCountUntillNewColumW, padd);
+			colums.push_back({rez, padd});
+			widgetsCountUntillNewColumW = 0;
+		}
+
+		int currentColum = 0;
+
+		for (auto &i : colums)
+		{
+			i.first.z /= colums.size();
+		}
+		float columAdvanceSize = colums[0].first.z; //all colums have the same width for now
+		float beginY = colums[0].first.y; //all colums start from the same height fot now
+
+		for (int i=0; i<colums.size(); i++)
+		{
+			colums[i].first.x += columAdvanceSize * i;
+		}
 
 		auto camera = renderer.currentCamera;
 		renderer.currentCamera.setDefault();
@@ -560,23 +614,26 @@ namespace glui
 				i.second.justCreated = true;
 				widgets.insert(i);
 				
-				
 				//continue;
 			}
 			else 
 			{
-				if (i.first != "##$texture")
+				
+				if (find->second.type != i.second.type)
 				{
-					if (find->second.type != i.second.type)
-					{
-						errorFunc("reupdated a widget with a different type");
-					}
-
-					if (find->second.usedThisFrame == true)
-					{
-						errorFunc("used a widget name twice");
-					}
+					errorFunc("reupdated a widget with a different type");
 				}
+
+				if (find->second.usedThisFrame == true)
+				{
+					errorFunc("used a widget name twice");
+				}
+
+				auto pd = find->second.pd;
+
+				find->second = i.second;
+				find->second.justCreated = false;
+				find->second.pd = pd;
 
 				find->second.usedThisFrame = true;
 				//continue;
@@ -588,8 +645,8 @@ namespace glui
 
 				auto drawButton = [&]()
 				{
-					auto transformDrawn = computedPos;
-					auto aabbTransform = computedPos;
+					auto transformDrawn = colums[currentColum].first;
+					auto aabbTransform = colums[currentColum].first;
 					bool hovered = 0;
 					bool clicked = 0;
 					auto textColor = Colors_White;
@@ -650,7 +707,7 @@ namespace glui
 					}
 					case widgetType::toggle:
 					{
-						auto transformDrawn = computedPos;
+						auto transformDrawn = colums[currentColum].first;
 						bool hovered = 0;
 						bool clicked = 0;
 
@@ -728,7 +785,7 @@ namespace glui
 					case widgetType::text:
 					{
 
-						renderText(renderer, j.first, font, computedPos, j.second.colors, true);
+						renderText(renderer, j.first, font, colums[currentColum].first, j.second.colors, true);
 
 						break;
 					}
@@ -767,7 +824,7 @@ namespace glui
 
 						if (i.second.texture.id != 0)
 						{
-							renderFancyBox(renderer, computedPos, i.second.colors, widget.texture, 0, 0);
+							renderFancyBox(renderer, colums[currentColum].first, i.second.colors, widget.texture, 0, 0);
 						}
 						
 						std::string textCopy = text;
@@ -776,7 +833,7 @@ namespace glui
 							textCopy += "|";
 						}
 
-						renderText(renderer, textCopy, font, computedPos, Colors_White, true);
+						renderText(renderer, textCopy, font, colums[currentColum].first, Colors_White, true);
 
 
 						break;
@@ -795,7 +852,7 @@ namespace glui
 					case widgetType::texture:
 					{
 
-						renderTexture(renderer, computedPos, j.second.texture, j.second.colors,
+						renderTexture(renderer, colums[currentColum].first, j.second.texture, j.second.colors,
 							j.second.textureCoords);
 
 						break;
@@ -805,7 +862,7 @@ namespace glui
 					{
 						bool hovered = false;
 						bool clicked = false;
-						glm::vec4 transformDrawn = computeTextureNewPosition(computedPos, j.second.texture);
+						glm::vec4 transformDrawn = computeTextureNewPosition(colums[currentColum].first, j.second.texture);
 						glm::vec4 aabbPos = transformDrawn;
 						glm::vec4 color = j.second.colors;
 
@@ -842,6 +899,8 @@ namespace glui
 
 					case widgetType::sliderFloatW:
 					{
+						auto computedPos = colums[currentColum].first;
+
 						glm::vec4 textTransform{computedPos.x, computedPos.y, computedPos.z / 2, computedPos.w};
 						glm::vec4 sliderTransform{computedPos.x + computedPos.z / 2, computedPos.y, computedPos.z/2, computedPos.w};
 
@@ -863,7 +922,7 @@ namespace glui
 						renderText(renderer, text, font, textTransform, j.second.colors, true);
 
 						renderSliderFloat(renderer, sliderTransform,
-							value, j.second.min, j.second.max, j.second.sliderBeingDragged,
+							value, j.second.min, j.second.max, j.second.pd.sliderBeingDragged,
 							j.second.texture, j.second.colors, j.second.textureOver, j.second.colors2, input);
 
 						break;
@@ -871,6 +930,8 @@ namespace glui
 
 					case widgetType::colorPickerW:
 					{
+						auto computedPos = colums[currentColum].first;
+
 						glm::vec4 textTransform{computedPos.x, computedPos.y, computedPos.z / 4, computedPos.w};
 						glm::vec4 transform1{computedPos.x + (computedPos.z / 4.f)*1, computedPos.y, computedPos.z / 4.f, computedPos.w};
 						glm::vec4 transform2{computedPos.x + (computedPos.z / 4.f)*2, computedPos.y, computedPos.z / 4.f, computedPos.w};
@@ -886,27 +947,32 @@ namespace glui
 						renderText(renderer, j.first, font, textTransform, color, true);
 
 						renderSliderFloat(renderer, transform1,
-							value+0, 0, 1, j.second.sliderBeingDragged,
+							value+0, 0, 1, j.second.pd.sliderBeingDragged,
 							j.second.texture, {1,0,0,1}, j.second.textureOver, {1,0,0,1}, input);
 
 						renderSliderFloat(renderer, transform2,
-							value+1, 0, 1, j.second.sliderBeingDragged2,
+							value+1, 0, 1, j.second.pd.sliderBeingDragged2,
 							j.second.texture, {0,1,0,1}, j.second.textureOver, {0,1,0,1}, input);
 
 						renderSliderFloat(renderer, transform3,
-							value+2, 0, 1, j.second.sliderBeingDragged3,
+							value+2, 0, 1, j.second.pd.sliderBeingDragged3,
 							j.second.texture, {0,0,1,1}, j.second.textureOver, {0,0,1,1}, input);
 
 						break;
 					}
-
+					case widgetType::newColumW:
+					{
+						currentColum++;
+						colums[currentColum].first.y -= colums[currentColum].second; //neagate end of loop;
+						break;
+					}
 				}
 
 				widget.justCreated = false;
 				widget.lastFrameData = input;
 			}
 
-			computedPos.y += (paddSizeY * 2 + sizeY) * mainInSizeY;
+			colums[currentColum].first.y += colums[currentColum].second;
 		}
 
 		
@@ -962,7 +1028,7 @@ namespace glui
 		
 	}
 
-	void Texture(gl2d::Texture t, gl2d::Color4f colors, glm::vec4 textureCoords)
+	void Texture(int id, gl2d::Texture t, gl2d::Color4f colors, glm::vec4 textureCoords)
 	{
 		Widget widget = {};
 		widget.type = widgetType::texture;
@@ -972,7 +1038,7 @@ namespace glui
 		widget.usedThisFrame = true;
 		widget.justCreated = true;
 
-		widgetsVector.push_back({"##$texture", widget});
+		widgetsVector.push_back({"##$texture" + std::to_string(id), widget});
 	}
 
 	bool ButtonWithTexture(int id, gl2d::Texture t, gl2d::Color4f colors, glm::vec4 textureCoords)
@@ -1089,6 +1155,14 @@ namespace glui
 
 		widgetsVector.push_back({name, widget});
 
+	}
+
+	void newColum(int id)
+	{
+		Widget widget = {};
+		widget.type = widgetType::newColumW;
+
+		widgetsVector.push_back({"##$colum" + std::to_string(id), widget});
 	}
 
 	void PushId(int id)

@@ -42,9 +42,9 @@ void render1()
 {
 	glui::Begin(6996);
 		//glui::Text("Terraria", Colors_Gray);
-		glui::Texture(terrariaTexture);
-		glui::Texture(terrariaTexture);
-		glui::Texture(terrariaTexture);
+		glui::Texture(0, terrariaTexture);
+		glui::Texture(1, terrariaTexture);
+		glui::Texture(2, terrariaTexture);
 
 		if (glui::ButtonWithTexture(1, terrariaTexture))
 		{
@@ -54,9 +54,23 @@ void render1()
 		static float value = 0;
 		glui::sliderFloat("Slider example", &value, -2, 5, texture, {1,1,1,1}, texture);
 
-		static glm::vec3 color = {};
+		
 
-		glui::colorPicker("color example", &color[0], texture, texture);
+		glui::BeginMenu("color test", Colors_Transparent, texture);
+		{
+			static glm::vec3 color = {};
+			static glm::vec3 color2 = {};
+			glui::colorPicker("color example", &color[0], texture, texture);
+			glui::colorPicker("color example2", &color2[0], texture, texture);
+
+			glui::newColum(0);
+
+			glui::Texture(3, texture, {color, 1});
+			glui::Texture(4, texture, {color2, 1});
+
+
+		}
+		glui::EndMenu();
 
 
 		glui::BeginMenu("settings", Colors_Transparent, texture);
@@ -82,6 +96,7 @@ void render1()
 			glui::Button("create", Colors_Transparent, texture);
 		glui::EndMenu();
 		glui::Button("Exit", Colors_Transparent, texture);
+
 	glui::End();
 }
 
