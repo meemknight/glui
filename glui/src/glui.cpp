@@ -2,6 +2,7 @@
 #include "gl2d/gl2d.h"
 #include <unordered_map>
 #include <iostream>
+#include <sstream>
 
 namespace glui
 {
@@ -38,6 +39,7 @@ namespace glui
 		endMenu,
 		texture,
 		buttonWithTexture,
+		sliderFloatW,
 	};
 
 	struct InputData
@@ -61,7 +63,10 @@ namespace glui
 		gl2d::Texture textureOver = {};
 		glm::vec4 textureCoords = {};
 		bool returnFromUpdate = 0;
-		void* pointer = 0;
+		void *pointer = 0;
+		float min = 0;
+		float max = 0;
+		bool sliderBeingDragged = 0;
 		size_t textSize = 0;
 	};
 
@@ -149,11 +154,20 @@ namespace glui
 			colorDim += 0.2f;
 			if (clicked)
 			{
-				colorDim += 0.1f;
+				colorDim = -0.8f;
 			}
 		}
 
-		auto newColor = stepColorUp(color, colorDim);
+		glm::vec4 newColor = {};
+		if (colorDim >= 0)
+		{
+			newColor = stepColorUp(color, colorDim);
+		}
+		else
+		{
+			newColor = stepColorDown(color, -colorDim); //todo refactor this functions
+		}
+
 		auto lightColor = stepColorUp(newColor, 0.02);
 		auto darkColor = stepColorDown(newColor, 0.5f);
 		auto darkerColor = stepColorDown(newColor, 0.25f);
@@ -449,7 +463,7 @@ namespace glui
 		auto camera = renderer.currentCamera;
 		renderer.currentCamera.setDefault();
 
-		InputData input;
+		InputData input = {};
 		input.mousePos = mousePos;
 		input.mouseClick = mouseClick;
 		input.mouseHeld = mouseHeld;
@@ -749,6 +763,101 @@ namespace glui
 						break;
 					}
 
+					case widgetType::sliderFloatW:
+					{
+						glm::vec4 textTransform{computedPos.x, computedPos.y, computedPos.z / 2, computedPos.w};
+						glm::vec4 sliderTransform{computedPos.x + computedPos.z / 2, computedPos.y, computedPos.z/2, computedPos.w};
+
+						float *value = (float*)j.second.pointer;
+
+						*value = std::min(*value, j.second.max);
+						*value = std::max(*value, j.second.min);
+
+						if (!value) { break; }
+
+						std::string text = j.first;
+						
+						std::ostringstream s;
+						s.precision(2);
+						s << std::fixed << *value;
+
+						text = getString(text) + ": " + s.str();
+
+						renderText(renderer, text, font, textTransform, j.second.colors, true);
+
+						{
+							float barSize = 5;
+							float barIndent = 5;
+
+							glm::vec4 barTransform(sliderTransform.x + barIndent, sliderTransform.y + (sliderTransform.w - barSize)/2.f,
+								sliderTransform.z - barIndent*2.f, barSize);
+
+							float bulletSize = 14.f;
+
+							glm::vec4 bulletTransform(barTransform.x - (bulletSize) / 2.f, barTransform.y + (barSize - bulletSize)/2.f,
+								bulletSize, bulletSize);
+
+							
+
+							bulletTransform.x += (*value - j.second.min) / (j.second.max - j.second.min) * barTransform.z;
+
+							//todo color
+							renderFancyBox(renderer, barTransform, Colors_White, {}, 0, 0);
+
+							bool hovered = false;
+							bool clicked = false;
+
+							if (j.second.sliderBeingDragged == true && input.mouseHeld)
+							{
+								hovered = true;
+								clicked = true;
+							}
+							else
+							{
+								if (aabb(bulletTransform, mousePos))
+								{
+									hovered = true;
+
+									if (input.mouseHeld)
+									{
+										clicked = true;
+									}
+								}
+							}
+
+							if (clicked)
+							{
+								j.second.sliderBeingDragged = true;
+								
+								int begin = barTransform.x;
+								int end = barTransform.x + barTransform.z;
+							
+								int mouseX = input.mousePos.x;
+
+								float mouseVal = (mouseX - (float)begin) / (end - (float)begin);
+
+								mouseVal = glm::clamp(mouseVal, 0.f, 1.f);
+
+								mouseVal *= j.second.max - j.second.min;
+								mouseVal += j.second.min;
+
+								*value = mouseVal;
+							}
+							else
+							{
+								j.second.sliderBeingDragged = false;
+							}
+
+							
+							renderFancyBox(renderer, bulletTransform, Colors_White, {}, hovered, clicked);
+
+
+						}
+
+
+						break;
+					}
+
 				}
 
 				widget.justCreated = false;
@@ -902,6 +1011,23 @@ namespace glui
 		widget.usedThisFrame = true;
 		widget.justCreated = true;
 		widgetsVector.push_back({name, widget});
+	}
+
+	void sliderFloat(std::string name, float *value, float min, float max)
+	{
+		name += idStr;
+
+		Widget widget = {};
+		widget.type = widgetType::sliderFloatW;
+		widget.pointer = value;
+		widget.usedThisFrame = true;
+		widget.justCreated = true;
+		widget.min = min;
+		widget.max = max;
+
+		widgetsVector.push_back({name, widget});
+
+
 	}
 
 	void PushId(int id)

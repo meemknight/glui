@@ -46,15 +46,13 @@ void render1()
 		glui::Texture(terrariaTexture);
 		glui::Texture(terrariaTexture);
 
-		if (glui::Button("Play", Colors_Green))
-		{
-			//play
-		}
-
 		if (glui::ButtonWithTexture(1, terrariaTexture))
 		{
 			//play
 		}
+
+		static float value = 0;
+		glui::sliderFloat("Slider example", &value, -2, 5);
 
 		glui::BeginMenu("settings", Colors_Transparent, texture);
 			glui::BeginMenu("volume settings", Colors_Transparent, texture);

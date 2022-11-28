@@ -39,6 +39,8 @@ namespace glui
 	void InputText(std::string name,
 		char* text, size_t textSizeWithNullChar, gl2d::Color4f color = {0,0,0,0}, const gl2d::Texture texture = {});
 
+	void sliderFloat(std::string name, float *value, float min, float max);
+
 	void PushId(int id);
 
 	void PopId();
