@@ -40,6 +40,7 @@ namespace glui
 		texture,
 		buttonWithTexture,
 		sliderFloatW,
+		colorPickerW,
 	};
 
 	struct InputData
@@ -59,6 +60,7 @@ namespace glui
 		bool usedThisFrame = 0;
 		InputData lastFrameData = {};
 		gl2d::Color4f colors = Colors_White;
+		gl2d::Color4f colors2 = Colors_White;
 		gl2d::Texture texture = {};
 		gl2d::Texture textureOver = {};
 		glm::vec4 textureCoords = {};
@@ -67,6 +69,8 @@ namespace glui
 		float min = 0;
 		float max = 0;
 		bool sliderBeingDragged = 0;
+		bool sliderBeingDragged2 = 0;
+		bool sliderBeingDragged3 = 0;
 		size_t textSize = 0;
 	};
 
@@ -331,6 +335,79 @@ namespace glui
 
 		renderer.renderRectangle(newPos, c,
 			{}, 0.f, t);
+	}
+
+	void renderSliderFloat(gl2d::Renderer2D &renderer, glm::vec4 transform, float *value, float min, float max, 
+		bool &sliderBeingDragged,
+		gl2d::Texture barT, gl2d::Color4f barC, gl2d::Texture ballT, gl2d::Color4f ballC, InputData &input)
+	{
+
+		float barSize = 4;
+		float barIndent = 15;
+
+		glm::vec4 barTransform(transform.x + barIndent, transform.y + (transform.w - barSize) / 2.f,
+			transform.z - barIndent * 2.f, barSize);
+
+		float bulletSize = 14.f;
+
+		glm::vec4 bulletTransform(barTransform.x - (bulletSize) / 2.f, barTransform.y + (barSize - bulletSize) / 2.f,
+			bulletSize, bulletSize);
+
+
+		bulletTransform.x += std::max( std::min((*value - min) / (max - min), 1.f), 0.f)
+			* barTransform.z;
+
+		//todo color
+		renderFancyBox(renderer, barTransform, barC, barT, 0, 0);
+
+		bool hovered = false;
+		bool clicked = false;
+
+		if (sliderBeingDragged == true && input.mouseHeld)
+		{
+			hovered = true;
+			clicked = true;
+		}
+		else
+		{
+			if (aabb(bulletTransform, input.mousePos))
+			{
+				hovered = true;
+
+				if (input.mouseClick)
+				{
+					clicked = true;
+				}
+			}
+		}
+
+		if (clicked)
+		{
+			sliderBeingDragged = true;
+
+			int begin = barTransform.x;
+			int end = barTransform.x + barTransform.z;
+
+			int mouseX = input.mousePos.x;
+
+			float mouseVal = (mouseX - (float)begin) / (end - (float)begin);
+
+			mouseVal = glm::clamp(mouseVal, 0.f, 1.f);
+
+			mouseVal *= max - min;
+			mouseVal += min;
+
+			*value = mouseVal;
+		}
+		else
+		{
+			sliderBeingDragged = false;
+		}
+
+
+		renderFancyBox(renderer, bulletTransform, ballC, ballT,
+			hovered, clicked);
+		
 	}
 
 
@@ -785,75 +862,40 @@ namespace glui
 
 						renderText(renderer, text, font, textTransform, j.second.colors, true);
 
-						{
-							float barSize = 5;
-							float barIndent = 5;
+						renderSliderFloat(renderer, sliderTransform,
+							value, j.second.min, j.second.max, j.second.sliderBeingDragged,
+							j.second.texture, j.second.colors, j.second.textureOver, j.second.colors2, input);
 
-							glm::vec4 barTransform(sliderTransform.x + barIndent, sliderTransform.y + (sliderTransform.w - barSize)/2.f,
-								sliderTransform.z - barIndent*2.f, barSize);
+						break;
+					}
 
-							float bulletSize = 14.f;
+					case widgetType::colorPickerW:
+					{
+						glm::vec4 textTransform{computedPos.x, computedPos.y, computedPos.z / 4, computedPos.w};
+						glm::vec4 transform1{computedPos.x + (computedPos.z / 4.f)*1, computedPos.y, computedPos.z / 4.f, computedPos.w};
+						glm::vec4 transform2{computedPos.x + (computedPos.z / 4.f)*2, computedPos.y, computedPos.z / 4.f, computedPos.w};
+						glm::vec4 transform3{computedPos.x + (computedPos.z / 4.f)*3, computedPos.y, computedPos.z / 4.f, computedPos.w};
 
-							glm::vec4 bulletTransform(barTransform.x - (bulletSize) / 2.f, barTransform.y + (barSize - bulletSize)/2.f,
-								bulletSize, bulletSize);
+						float *value;
+						value = (float *)j.second.pointer;
 
-							
+						if (!value) { break; }
 
-							bulletTransform.x += (*value - j.second.min) / (j.second.max - j.second.min) * barTransform.z;
+						glm::vec4 color = {value[0], value[1], value[2], 1};
 
-							//todo color
-							renderFancyBox(renderer, barTransform, Colors_White, {}, 0, 0);
+						renderText(renderer, j.first, font, textTransform, color, true);
 
-							bool hovered = false;
-							bool clicked = false;
+						renderSliderFloat(renderer, transform1,
+							value+0, 0, 1, j.second.sliderBeingDragged,
+							j.second.texture, {1,0,0,1}, j.second.textureOver, {1,0,0,1}, input);
 
-							if (j.second.sliderBeingDragged == true && input.mouseHeld)
-							{
-								hovered = true;
-								clicked = true;
-							}
-							else
-							{
-								if (aabb(bulletTransform, mousePos))
-								{
-									hovered = true;
+						renderSliderFloat(renderer, transform2,
+							value+1, 0, 1, j.second.sliderBeingDragged2,
+							j.second.texture, {0,1,0,1}, j.second.textureOver, {0,1,0,1}, input);
 
-									if (input.mouseHeld)
-									{
-										clicked = true;
-									}
-								}
-							}
-
-							if (clicked)
-							{
-								j.second.sliderBeingDragged = true;
-								
-								int begin = barTransform.x;
-								int end = barTransform.x + barTransform.z;
-							
-								int mouseX = input.mousePos.x;
-
-								float mouseVal = (mouseX - (float)begin) / (end - (float)begin);
-
-								mouseVal = glm::clamp(mouseVal, 0.f, 1.f);
-
-								mouseVal *= j.second.max - j.second.min;
-								mouseVal += j.second.min;
-
-								*value = mouseVal;
-							}
-							else
-							{
-								j.second.sliderBeingDragged = false;
-							}
-
-							
-							renderFancyBox(renderer, bulletTransform, Colors_White, {}, hovered, clicked);
-
-
-						}
-
+						renderSliderFloat(renderer, transform3,
+							value+2, 0, 1, j.second.sliderBeingDragged3,
+							j.second.texture, {0,0,1,1}, j.second.textureOver, {0,0,1,1}, input);
 
 						break;
 					}
@@ -1013,7 +1055,9 @@ namespace glui
 		widgetsVector.push_back({name, widget});
 	}
 
-	void sliderFloat(std::string name, float *value, float min, float max)
+	void sliderFloat(std::string name, float *value, float min, float max,
+		gl2d::Texture sliderTexture, gl2d::Color4f sliderColor,
+		gl2d::Texture ballTexture, gl2d::Color4f ballColor)
 	{
 		name += idStr;
 
@@ -1024,9 +1068,26 @@ namespace glui
 		widget.justCreated = true;
 		widget.min = min;
 		widget.max = max;
+		widget.colors = sliderColor;
+		widget.colors2 = ballColor;
+		widget.texture = sliderTexture;
+		widget.textureOver = ballTexture;
+		
 
 		widgetsVector.push_back({name, widget});
 
+
+	}
+
+	void colorPicker(std::string name, float *color3Component, gl2d::Texture sliderTexture, gl2d::Texture ballTexture)
+	{
+		Widget widget = {};
+		widget.type = widgetType::colorPickerW;
+		widget.pointer = color3Component;
+		widget.texture = sliderTexture;
+		widget.textureOver = ballTexture;
+
+		widgetsVector.push_back({name, widget});
 
 	}
 

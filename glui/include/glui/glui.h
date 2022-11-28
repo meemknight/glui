@@ -39,7 +39,12 @@ namespace glui
 	void InputText(std::string name,
 		char* text, size_t textSizeWithNullChar, gl2d::Color4f color = {0,0,0,0}, const gl2d::Texture texture = {});
 
-	void sliderFloat(std::string name, float *value, float min, float max);
+	void sliderFloat(std::string name, float *value, float min, float max, 
+		gl2d::Texture sliderTexture = {}, gl2d::Color4f sliderColor = {1,1,1,1},
+		gl2d::Texture ballTexture = {}, gl2d::Color4f ballColor = {1,1,1,1} );
+
+	void colorPicker(std::string name, float *color3Component, gl2d::Texture sliderTexture = {},
+		gl2d::Texture ballTexture = {});
 
 	void PushId(int id);
 

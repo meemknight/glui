@@ -52,7 +52,12 @@ void render1()
 		}
 
 		static float value = 0;
-		glui::sliderFloat("Slider example", &value, -2, 5);
+		glui::sliderFloat("Slider example", &value, -2, 5, texture, {1,1,1,1}, texture);
+
+		static glm::vec3 color = {};
+
+		glui::colorPicker("color example", &color[0], texture, texture);
+
 
 		glui::BeginMenu("settings", Colors_Transparent, texture);
 			glui::BeginMenu("volume settings", Colors_Transparent, texture);
