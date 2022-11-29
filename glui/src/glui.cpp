@@ -220,44 +220,58 @@ namespace glui
 		}
 	}
 
+	//just z and w components of transform used
+	float determineTextSize(gl2d::Renderer2D &renderer, const std::string &str, gl2d::Font &f, glm::vec4 transform)
+	{
+		auto newStr = getString(str);
+		float size = 1.5;
+
+		auto s = renderer.getTextSize(newStr.c_str(), f, size);
+
+		float ratioX = transform.z / s.x;
+		float ratioY = transform.w / s.y;
+
+		if (ratioX > 1 && ratioY > 1)
+		{
+			if (ratioX > ratioY)
+			{
+				return size * ratioY;
+			}
+			else
+			{
+				return size * ratioX;
+			}
+		}
+		else
+		{
+			if (ratioX < ratioY)
+			{
+				return size * ratioX;
+			}
+			else
+			{
+				return size * ratioY;
+			}
+		}
+
+	}
+
 	glm::vec4 determineTextPos(gl2d::Renderer2D& renderer, const std::string& str, gl2d::Font& f, glm::vec4 transform,
 		bool noTexture, bool minimize = true)
 	{
 		auto newStr = getString(str);
+		auto newS = determineTextSize(renderer, newStr, f, transform);
 
-		float newFitX = textFitXBig;
-		float newFitY = textFitYBig;
-
-		if (minimize)
-		{
-			newFitX = textFitX;
-			newFitY = textFitY;
-		}
+		auto s = renderer.getTextSize(newStr.c_str(), f, newS);
 
 		glm::vec2 pos = glm::vec2(transform);
 
 		pos.x += transform.z / 2.f;
 		pos.y += transform.w / 2.f;
 
-		float s = 1.5;
-		auto size = renderer.getTextSize(newStr.c_str(), f, s);
+		pos -= s / 2.f;
 
-		float newSx = s * (transform.z * newFitX) / size.x;
-		float newSy = s * (transform.w * newFitY) / size.y;
-
-		float newS = std::min(newSx, newSy);
-		if (noTexture)
-		{
-			newS = std::max(newSx, newSy);
-		}
-		newS = std::min(1.f, newS);
-
-		glm::vec2 computedSize = renderer.getTextSize(newStr.c_str(), f, newS);
-		
-		pos.x -= computedSize.x / 2.f;
-		pos.y -= computedSize.y / 2.f;
-
-		return glm::vec4{pos, computedSize};
+		return glm::vec4{pos, s};
 	}
 
 	//todo reuse the upper function
@@ -265,34 +279,13 @@ namespace glui
 		bool noTexture, bool minimize = true)
 	{
 		auto newStr = getString(str);
-
-		float newFitX = textFitXBig;
-		float newFitY = textFitYBig;
-
-		if (minimize)
-		{
-			newFitX = textFitX;
-			newFitY = textFitY;
-		}
-
-		float s = 1.5;
-		auto size = renderer.getTextSize(newStr.c_str(), f, s);
-		float newSx = s * (transform.z * newFitX) / size.x;
-		float newSy = s * (transform.w * newFitY) / size.y;
+		auto newS = determineTextSize(renderer, newStr, f, transform);
 
 		glm::vec2 pos = glm::vec2(transform);
-
+		
 		pos.x += transform.z / 2.f;
 		pos.y += transform.w / 2.f;
-		
 
-		float newS = std::min(newSx, newSy);
-		if (noTexture)
-		{
-			newS = std::max(newSx, newSy);
-		}
-
-		newS = std::min(1.f, newS);
 
 		renderer.renderText(pos, newStr.c_str(), f, color, newS);
 	}
@@ -348,8 +341,8 @@ namespace glui
 		gl2d::Texture barT, gl2d::Color4f barC, gl2d::Texture ballT, gl2d::Color4f ballC, InputData &input)
 	{
 
-		float barSize = 4;
-		float barIndent = 15;
+		float barSize = 7;
+		float barIndent = 16;
 
 		glm::vec4 barTransform(transform.x + barIndent, transform.y + (transform.w - barSize) / 2.f,
 			transform.z - barIndent * 2.f, barSize);
@@ -376,7 +369,7 @@ namespace glui
 		}
 		else
 		{
-			if (aabb(bulletTransform, input.mousePos))
+			if (aabb(barTransform, input.mousePos))
 			{
 				hovered = true;
 
@@ -409,7 +402,6 @@ namespace glui
 		{
 			sliderBeingDragged = false;
 		}
-
 
 		renderFancyBox(renderer, bulletTransform, ballC, ballT,
 			hovered, clicked);
