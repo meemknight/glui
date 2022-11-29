@@ -485,6 +485,8 @@ namespace glui
 						{
 							nextMenu = currentMenuStackCopy.front();
 							currentMenuStackCopy.erase(currentMenuStackCopy.begin());
+							shouldIgnor = true;
+
 						}
 						else
 						{
