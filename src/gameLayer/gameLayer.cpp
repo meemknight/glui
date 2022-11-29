@@ -52,9 +52,28 @@ void render1()
 		}
 
 		static float value = 0;
+		static int valueInt = 0;
 		glui::sliderFloat("Slider example", &value, -2, 5, texture, {1,1,1,1}, texture);
+		glui::sliderInt("Slider example int", &valueInt, -2, 5, texture, {1,1,1,1}, texture);
 
-		
+		glm::vec4 customTransform = {};
+		bool clicked = 0;
+		bool hovered = 0;
+		if (glui::CustomWidget(23, &customTransform, &hovered, &clicked))
+		{
+			if (clicked)
+			{
+				renderer.renderRectangle(customTransform, Colors_Blue);
+			}
+			else if (hovered)
+			{
+				renderer.renderRectangle(customTransform, Colors_Green);
+			}
+			else
+			{
+				renderer.renderRectangle(customTransform, Colors_Red);
+			}
+		}
 
 		glui::BeginMenu("color test", Colors_Transparent, texture);
 		{
@@ -67,8 +86,7 @@ void render1()
 
 			glui::Texture(3, texture, {color, 1});
 			glui::Texture(4, texture, {color2, 1});
-
-
+		
 		}
 		glui::EndMenu();
 
