@@ -106,10 +106,10 @@ namespace glui
 	constexpr float pressDownSize = 0.04f;
 	constexpr float shadowSize = 0.1f;
 	constexpr float outlineSize = 0.02f;
-	constexpr float textFitX = 0.95f;
-	constexpr float textFitXBig = 0.98f;
-	constexpr float textFitY = 0.8f;
-	constexpr float textFitYBig = 0.85f;
+	constexpr float textFit = 1.2f;
+
+	constexpr float minimizeRatio = 0.9f;
+
 	constexpr float buttonFit  = 0.6f;
 	
 	constexpr float inSizeY = 0.8;
@@ -221,39 +221,54 @@ namespace glui
 	}
 
 	//just z and w components of transform used
-	float determineTextSize(gl2d::Renderer2D &renderer, const std::string &str, gl2d::Font &f, glm::vec4 transform)
+	float determineTextSize(gl2d::Renderer2D &renderer, const std::string &str, gl2d::Font &f, glm::vec4 transform, bool minimize = true)
 	{
 		auto newStr = getString(str);
-		float size = 1.5;
+		float size = textFit;
 
 		auto s = renderer.getTextSize(newStr.c_str(), f, size);
 
 		float ratioX = transform.z / s.x;
 		float ratioY = transform.w / s.y;
 
+
 		if (ratioX > 1 && ratioY > 1)
 		{
-			if (ratioX > ratioY)
-			{
-				return size * ratioY;
-			}
-			else
-			{
-				return size * ratioX;
-			}
+			
+			///keep size
+			//return size;
+			
+			//else
+			//{
+			//	if (ratioX > ratioY)
+			//	{
+			//		return size * ratioY;
+			//	}
+			//	else
+			//	{
+			//		return size * ratioX;
+			//	}
+			//}
+
 		}
 		else
 		{
 			if (ratioX < ratioY)
 			{
-				return size * ratioX;
+				size *= ratioX;
 			}
 			else
 			{
-				return size * ratioY;
+				size *= ratioY;
 			}
 		}
 
+		if (minimize)
+		{
+			size *= minimizeRatio;
+		}
+
+		return size;
 	}
 
 	glm::vec4 determineTextPos(gl2d::Renderer2D& renderer, const std::string& str, gl2d::Font& f, glm::vec4 transform,
@@ -279,7 +294,7 @@ namespace glui
 		bool noTexture, bool minimize = true)
 	{
 		auto newStr = getString(str);
-		auto newS = determineTextSize(renderer, newStr, f, transform);
+		auto newS = determineTextSize(renderer, newStr, f, transform, minimize);
 
 		glm::vec2 pos = glm::vec2(transform);
 		
@@ -683,7 +698,7 @@ namespace glui
 					}
 					else
 					{
-						renderText(renderer, j.first, font, transformDrawn, textColor, false, hovered);
+						renderText(renderer, j.first, font, transformDrawn, textColor, false, !hovered);
 					}
 
 					return widget.returnFromUpdate;
