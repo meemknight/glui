@@ -12,6 +12,7 @@ gl2d::Font font;
 gl2d::Texture texture;
 gl2d::Texture terrariaTexture;
 gl2d::Texture tick;
+glui::RendererUi ui;
 
 struct GameData
 {
@@ -33,33 +34,31 @@ bool initGame()
 		gameData = GameData();
 	}
 
-	glui::gluiInit();
-
 	return true;
 }
 
 void render1()
 {
-	glui::Begin(6996);
-		//glui::Text("Terraria", Colors_Gray);
-		glui::Texture(0, terrariaTexture);
-		glui::Texture(1, terrariaTexture);
-		glui::Texture(2, terrariaTexture);
+	ui.Begin(6996);
+		//ui.Text("Terraria", Colors_Gray);
+		ui.Texture(0, terrariaTexture);
+		ui.Texture(1, terrariaTexture);
+		ui.Texture(2, terrariaTexture);
 
-		if (glui::ButtonWithTexture(1, terrariaTexture))
+		if (ui.ButtonWithTexture(1, terrariaTexture))
 		{
 			//play
 		}
 
 		static float value = 0;
 		static int valueInt = 0;
-		glui::sliderFloat("Slider example", &value, -2, 5, texture, {1,1,1,1}, texture);
-		glui::sliderInt("Slider example int", &valueInt, -2, 5, texture, {1,1,1,1}, texture);
+		ui.sliderFloat("Slider example", &value, -2, 5, texture, {1,1,1,1}, texture);
+		ui.sliderInt("Slider example int", &valueInt, -2, 5, texture, {1,1,1,1}, texture);
 
 		glm::vec4 customTransform = {};
 		bool clicked = 0;
 		bool hovered = 0;
-		if (glui::CustomWidget(23, &customTransform, &hovered, &clicked))
+		if (ui.CustomWidget(23, &customTransform, &hovered, &clicked))
 		{
 			if (clicked)
 			{
@@ -75,81 +74,81 @@ void render1()
 			}
 		}
 
-		glui::BeginMenu("color test", Colors_Transparent, texture);
+		ui.BeginMenu("color test", Colors_Transparent, texture);
 		{
 			static glm::vec3 color = {};
 			static glm::vec3 color2 = {};
-			glui::colorPicker("color example", &color[0], texture, texture);
-			glui::colorPicker("color example2", &color2[0], texture, texture);
+			ui.colorPicker("color example", &color[0], texture, texture);
+			ui.colorPicker("color example2", &color2[0], texture, texture);
 
-			glui::newColum(0);
+			ui.newColum(0);
 
-			glui::Texture(3, texture, {color, 1});
-			glui::Texture(4, texture, {color2, 1});
+			ui.Texture(3, texture, {color, 1});
+			ui.Texture(4, texture, {color2, 1});
 		
 		}
-		glui::EndMenu();
+		ui.EndMenu();
 
 
-		glui::BeginMenu("settings", Colors_Transparent, texture);
-			glui::BeginMenu("volume settings", Colors_Transparent, texture);
+		ui.BeginMenu("settings", Colors_Transparent, texture);
+			ui.BeginMenu("volume settings", Colors_Transparent, texture);
 				static bool sound = true;
 				static bool music = true;
-				glui::Toggle("sound", Colors_Gray, &sound, texture, tick);
-				glui::Toggle("music", Colors_Gray, &music, texture, tick);
-			glui::EndMenu();
+				ui.Toggle("sound", Colors_Gray, &sound, texture, tick);
+				ui.Toggle("music", Colors_Gray, &music, texture, tick);
+			ui.EndMenu();
 
-			glui::BeginMenu("video settings", Colors_Transparent, texture);
+			ui.BeginMenu("video settings", Colors_Transparent, texture);
 				static bool vSync = true;
 				static bool shadows = true;
-				glui::Toggle("vSync", Colors_Gray, &vSync, texture, tick);
-				glui::Toggle("shadows", Colors_Gray, &shadows, texture, tick);
-			glui::EndMenu();
-		glui::EndMenu();
+				ui.Toggle("vSync", Colors_Gray, &vSync, texture, tick);
+				ui.Toggle("shadows", Colors_Gray, &shadows, texture, tick);
+			ui.EndMenu();
+		ui.EndMenu();
 
-		glui::BeginMenu("create new world", Colors_Green, texture);
-			glui::Text("Enter world name", Colors_Gray);
+		ui.BeginMenu("create new world", Colors_Green, texture);
+			ui.Text("Enter world name", Colors_Gray);
 			static char text[15];
-			glui::InputText("input", text, sizeof(text));
-			glui::Button("create", Colors_Transparent, texture);
-		glui::EndMenu();
-		glui::Button("Exit", Colors_Transparent, texture);
+			ui.InputText("input", text, sizeof(text));
+			ui.Button("create", Colors_Transparent, texture);
+		ui.EndMenu();
+		ui.Button("Exit", Colors_Transparent, {});
 
-	glui::End();
+	ui.End();
 }
 
 void render2()
 {
-	glui::Begin(100);
-		glui::Text("Minicraft", Colors_Blue);
+	ui.Begin(100);
+		ui.Text("Minicraft", Colors_Blue);
 
-		if (glui::Button("Play", Colors_Green, texture))
+		if (ui.Button("Play", Colors_Green, texture))
 		{
 			//play
 		}
 
-		glui::BeginMenu("settings", Colors_Transparent, texture);
-			glui::BeginMenu("vsync settings", Colors_Transparent, texture);
-				glui::Text("vsync stuff##test", Colors_White);
-			glui::EndMenu();
+		ui.BeginMenu("settings", Colors_Transparent, texture);
+			ui.BeginMenu("vsync settings", Colors_Transparent, texture);
+				ui.Text("vsync stuff##test", Colors_White);
+			ui.EndMenu();
 
-			glui::BeginMenu("video settings", Colors_Transparent, texture);
+			ui.BeginMenu("video settings", Colors_Transparent, texture);
 				static bool vSync = true;
 				static bool shadows = true;
-				glui::Toggle("vSync", Colors_Gray, &vSync, texture, tick);
-				glui::Toggle("shadows", Colors_Gray, &shadows, texture, tick);
-			glui::EndMenu();
-		glui::EndMenu();
+				ui.Toggle("vSync", Colors_Gray, &vSync, texture, tick);
+				ui.Toggle("shadows", Colors_Gray, &shadows, texture, tick);
+			ui.EndMenu();
+		ui.EndMenu();
 
-		glui::BeginMenu("Create new world", Colors_Green, texture);
-			glui::Text("Enter world name", Colors_Gray);
+		ui.BeginMenu("Create new world", Colors_Green, texture);
+			ui.Text("Enter world name", Colors_Gray);
 			static char text[15];
-			glui::InputText("input", text, sizeof(text));
-			glui::Button("create", Colors_Transparent, texture);
-		glui::EndMenu();
-		glui::Button("Exit...", Colors_Gray, texture);
+			ui.InputText("input", text, sizeof(text));
+			ui.Button("create", Colors_Transparent, texture);
+		ui.EndMenu();
+		ui.Button("Exit...", Colors_Gray, texture);
 	
-	glui::End();
+	ui.End();
 
 
 }
@@ -187,7 +186,7 @@ bool gameLogic(float deltaTime)
 
 #pragma region set finishing stuff
 
-	glui::renderFrame(renderer, font, platform::getRelMousePosition(),
+	ui.renderFrame(renderer, font, platform::getRelMousePosition(),
 		platform::isLMousePressed(), platform::isLMouseHeld(), platform::isLMouseReleased(),
 		platform::isKeyReleased(platform::Button::Escape), platform::getTypedInput(), deltaTime);
 
