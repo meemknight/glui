@@ -11,6 +11,7 @@ gl2d::Renderer2D renderer;
 gl2d::Font font;
 gl2d::Texture texture;
 gl2d::Texture terrariaTexture;
+gl2d::Texture logoTexture;
 gl2d::Texture tick;
 glui::RendererUi ui;
 
@@ -27,6 +28,7 @@ bool initGame()
 	font.createFromFile(RESOURCES_PATH "font/ANDYB.TTF");
 	texture.loadFromFile(RESOURCES_PATH "ui.png", true);
 	terrariaTexture.loadFromFile(RESOURCES_PATH "terraria.png");
+	logoTexture.loadFromFile(RESOURCES_PATH "logo.png", true);
 	tick.loadFromFile(RESOURCES_PATH "tick.png", true);
 
 	if(!platform::readEntireFile(RESOURCES_PATH "gameData.data", &gameData, sizeof(GameData)))
@@ -41,11 +43,11 @@ void render1()
 {
 	ui.Begin(6996);
 		//ui.Text("Terraria", Colors_Gray);
-		ui.Texture(0, terrariaTexture);
-		ui.Texture(1, terrariaTexture);
-		ui.Texture(2, terrariaTexture);
+		//ui.Texture(0, terrariaTexture);
+		//ui.Texture(1, terrariaTexture);
+		//ui.Texture(2, terrariaTexture);
 
-		if (ui.ButtonWithTexture(1, terrariaTexture))
+		if (ui.ButtonWithTexture(1, texture))
 		{
 			//play
 		}
@@ -117,10 +119,16 @@ void render1()
 	ui.End();
 }
 
+float masterVolume = 1;
+float musicVolume = 1;
+float soundsVolume = 1;
+bool vSync = true;
+bool shadows = true;
+
 void render2()
 {
 	ui.Begin(100);
-		ui.Text("Minicraft", Colors_Blue);
+		ui.Texture(1, logoTexture);
 
 		if (ui.Button("Play", Colors_Green, texture))
 		{
@@ -128,25 +136,23 @@ void render2()
 		}
 
 		ui.BeginMenu("settings", Colors_Transparent, texture);
-			ui.BeginMenu("vsync settings", Colors_Transparent, texture);
-				ui.Text("vsync stuff##test", Colors_White);
+			ui.BeginMenu("Sound settings", Colors_Transparent, texture);
+				ui.sliderFloat("Master volume", &masterVolume, 0, 1, texture, Colors_White, texture);
+				ui.sliderFloat("Music volume", &musicVolume, 0, 1, texture, Colors_White, texture);
+				ui.sliderFloat("Sounds volume", &soundsVolume, 0, 1, texture, Colors_White, texture);
 			ui.EndMenu();
 
 			ui.BeginMenu("video settings", Colors_Transparent, texture);
-				static bool vSync = true;
-				static bool shadows = true;
 				ui.Toggle("vSync", Colors_Gray, &vSync, texture, tick);
 				ui.Toggle("shadows", Colors_Gray, &shadows, texture, tick);
 			ui.EndMenu();
 		ui.EndMenu();
 
-		ui.BeginMenu("Create new world", Colors_Green, texture);
-			ui.Text("Enter world name", Colors_Gray);
-			static char text[15];
-			ui.InputText("input", text, sizeof(text));
-			ui.Button("create", Colors_Transparent, texture);
-		ui.EndMenu();
-		ui.Button("Exit...", Colors_Gray, texture);
+		
+		if (ui.Button("Exit...", Colors_Gray, texture))
+		{
+			//exit
+		}
 	
 	ui.End();
 
