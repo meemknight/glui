@@ -5,7 +5,7 @@ A simple menu library for OpenGL apps.
 
 Because it is very easy to use to prototype things. The library is header only! Just a few lines of code will get you a fully responsive and working menu!
 
-## This uses my [2D library](https://github.com/meemknight/glui), check it out!
+## This uses my [2D library](https://github.com/meemknight/gl2d), check it out!
 (but you can add that easily or make your own backed 👀)
 
 ## This little code:
