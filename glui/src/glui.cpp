@@ -1094,7 +1094,7 @@ namespace glui
 
 		if (!internal.idStr.empty())
 		{
-			errorFunc("More pushes than pops");
+			errorFunc("More pushes than pops, did you forget to call End() or PopId()?");
 		}
 		internal.idStr.clear();
 
