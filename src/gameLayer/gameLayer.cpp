@@ -173,7 +173,7 @@ bool gameLogic(float deltaTime)
 	renderer.clearScreen(gl2d::Color4f(0.2,0.2,0.3, 1));
 #pragma endregion
 
-	ImGui::ShowDemoWindow();
+	//ImGui::ShowDemoWindow();
 
 	if (change)
 	{

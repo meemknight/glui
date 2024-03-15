@@ -672,11 +672,12 @@ namespace glui
 				if (find->second.type != i.second.type)
 				{
 					errorFunc("reupdated a widget with a different type");
+					//todo warning or nothing at all?
 				}
 
 				if (find->second.usedThisFrame == true)
 				{
-					errorFunc("used a widget name twice");
+					errorFunc("used a widget name more than once, use name##unique_id");
 				}
 
 				auto pd = find->second.pd;
