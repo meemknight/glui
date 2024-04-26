@@ -26,9 +26,9 @@ bool initGame()
 	renderer.create();
 	//font.createFromFile(RESOURCES_PATH "roboto_black.ttf");
 	font.createFromFile(RESOURCES_PATH "font/ANDYB.TTF");
-	texture.loadFromFile(RESOURCES_PATH "ui.png", true);
+	texture.loadFromFile(RESOURCES_PATH "mc/beacon_button_default.png", true);
 	terrariaTexture.loadFromFile(RESOURCES_PATH "terraria.png");
-	logoTexture.loadFromFile(RESOURCES_PATH "logo.png", true);
+	//logoTexture.loadFromFile(RESOURCES_PATH "logo.png", true);
 	tick.loadFromFile(RESOURCES_PATH "tick.png", true);
 
 	if(!platform::readEntireFile(RESOURCES_PATH "gameData.data", &gameData, sizeof(GameData)))
@@ -54,8 +54,8 @@ void render1()
 
 		static float value = 0;
 		static int valueInt = 0;
-		ui.sliderFloat("Slider example", &value, -2, 5, texture, {1,1,1,1}, texture);
-		ui.sliderInt("Slider example int", &valueInt, -2, 5, texture, {1,1,1,1}, texture);
+		ui.sliderFloat("Slider example", &value, -2, 5, Colors_White, texture, {1,1,1,1}, texture);
+		ui.sliderInt("Slider example int", &valueInt, -2, 5, {1,1,1,1}, texture, {1,1,1,1}, texture);
 
 		glm::vec4 customTransform = {};
 		bool clicked = 0;
@@ -128,7 +128,10 @@ bool shadows = true;
 void render2()
 {
 	ui.Begin(100);
-		ui.Texture(1, logoTexture);
+
+
+	
+		ui.SetAlignModeFixedSizeWidgets({0, 100});
 
 		if (ui.Button("Play", Colors_Green, texture))
 		{
@@ -137,9 +140,9 @@ void render2()
 
 		ui.BeginMenu("settings", Colors_Transparent, texture);
 			ui.BeginMenu("Sound settings", Colors_Transparent, texture);
-				ui.sliderFloat("Master volume", &masterVolume, 0, 1, texture, Colors_White, texture);
-				ui.sliderFloat("Music volume", &musicVolume, 0, 1, texture, Colors_White, texture);
-				ui.sliderFloat("Sounds volume", &soundsVolume, 0, 1, texture, Colors_White, texture);
+				ui.sliderFloat("Master volume", &masterVolume, 0, 1, Colors_White, texture, Colors_White, texture);
+				ui.sliderFloat("Music volume", &musicVolume, 0, 1, Colors_White, texture, Colors_White, texture);
+				ui.sliderFloat("Sounds volume", &soundsVolume, 0, 1, Colors_White, texture, Colors_White, texture);
 			ui.EndMenu();
 
 			ui.BeginMenu("video settings", Colors_Transparent, texture);
@@ -153,14 +156,57 @@ void render2()
 		{
 			//exit
 		}
-	
+
+		static glm::vec3 color = {1,1,1};
+
+		ui.colorPicker("color", &color[0], texture, texture, Colors_White, Colors_Gray);
+
+		static bool toggle = 0;
+		ui.ToggleButton("Toggle test", Colors_White, &toggle, texture);
+
+		static char text[20] = {};
+		ui.InputText("Test: ", text, sizeof(text), Colors_White, texture);
+
+		static char text2[20] = {};
+		ui.InputText("Test2: ", text2, sizeof(text2), Colors_White, texture);
+
+	ui.newColum(1);
+
+	if (ui.Button("Settings##1", Colors_White, texture))
+	{
+		//play
+	}
+
+	if (ui.Button("Settings##2", Colors_White, texture))
+	{
+		//play
+	}
+
+	if (ui.Button("Settings##3", Colors_White, texture))
+	{
+		//play
+	}
+
+	if (ui.Button("Settings##4", Colors_White, texture))
+	{
+		//play
+	}
+
+	static float val = 0;
+
+	ui.sliderFloat("test", &val, 0, 1, Colors_White, texture, Colors_Gray, texture);
+
+	static int val2 = 0;
+	ui.sliderInt("test##2", &val2, 0, 100, Colors_White, texture, Colors_Gray, texture);
+
+
 	ui.End();
 
 
 }
 
 
-bool change = 0;
+bool change = 1;
 
 bool gameLogic(float deltaTime)
 {

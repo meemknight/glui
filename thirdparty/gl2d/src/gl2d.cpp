@@ -1,6 +1,6 @@
-//////////////////////////////////////////////////
-//gl2d.cpp				1.2.5
-//Copyright(c) 2020 Luta Vlad
+/////////////////////////////////////////////////////////////////
+//gl2d.cpp				1.6.1
+//Copyright(c) 2020 - 2024 Luta Vlad
 //https://github.com/meemknight/gl2d
 // 
 //notes: 
@@ -45,13 +45,30 @@
 // removed capacity render limit
 // added some more comments
 // 
-/////////////////////////////////////////////////////////
+// 1.4.1
+// line rendering
+// rect outline rendering
+// circle outline rendering
+// 
+// 1.5.0
+// started to add some more needed text functions
+// needed to be tested tho
+// 
+// 1.5.1
+// fixed the follow function
+// 
+// 1.5.2
+// read texture data + report error if opengl not loaded
+// 
+// 1.6.0
+// Added post processing API + Improvements in custom shaders usage
+// 
+////////////////////////////////////////////////////////////////////////
 
 
 //	todo
 //
 //	add particle demo
-//	shaders demo
 //	add matrices transforms
 //	flags for vbos
 //	
@@ -76,6 +93,7 @@
 #endif
 
 #undef max
+#undef min
 
 
 namespace gl2d
@@ -94,11 +112,13 @@ namespace gl2d
 		"in vec2 texturePositions;\n"
 		"out vec4 v_color;\n"
 		"out vec2 v_texture;\n"
+		"out vec2 v_positions;\n"
 		"void main()\n"
 		"{\n"
 		"	gl_Position = vec4(quad_positions, 0, 1);\n"
 		"	v_color = quad_colors;\n"
 		"	v_texture = texturePositions;\n"
+		"	v_positions = gl_Position.xy;\n"
 		"}\n";
 
 	static const char* defaultFragmentShader =
@@ -111,6 +131,21 @@ namespace gl2d
 		"void main()\n"
 		"{\n"
 		"    color = v_color * texture2D(u_sampler, v_texture);\n"
+		"}\n";
+
+	static const char *defaultVertexPostProcessShader =
+		GL2D_OPNEGL_SHADER_VERSION "\n"
+		GL2D_OPNEGL_SHADER_PRECISION "\n"
+		"in vec2 quad_positions;\n"
+		"out vec2 v_positions;\n"
+		"out vec2 v_texture;\n"
+		"out vec4 v_color;\n"
+		"void main()\n"
+		"{\n"
+		"	gl_Position = vec4(quad_positions, 0, 1);\n"
+		"	v_positions = gl_Position.xy;\n"
+		"	v_color = vec4(1,1,1,1);\n"
+		"	v_texture = (gl_Position.xy + vec2(1))/2.f;\n"
 		"}\n";
 
 #pragma endregion
@@ -222,6 +257,14 @@ namespace gl2d
 		if (hasInitialized) { return; }
 		hasInitialized = true;
 
+		if (!glGenTextures)
+		{
+			errorFunc("OpenGL doesn't \
+seem to be initialized, have you forgotten to call gladLoadGL() \
+or gladLoadGLLoader() or glewInit()?", userDefinedData);
+		}
+
+
 		//int last = 0;
 		//glGetIntegerv(GL_NUM_EXTENSIONS, &last);
 		//for(int i=0; i<last; i++)
@@ -250,7 +293,7 @@ namespace gl2d
 	void clearnup()
 	{
 		white1pxSquareTexture.cleanup();
-		glDeleteShader(defaultShader.id);
+		defaultShader.clear();
 		hasInitialized = false;
 	}
 
@@ -295,6 +338,30 @@ namespace gl2d
 	///////////////////// Shader /////////////////////
 #pragma region shader
 
+	void validateProgram(GLuint id)
+	{
+		int info = 0;
+		glGetProgramiv(id, GL_LINK_STATUS, &info);
+
+		if (info != GL_TRUE)
+		{
+			char *message = 0;
+			int   l = 0;
+
+			glGetProgramiv(id, GL_INFO_LOG_LENGTH, &l);
+
+			message = new char[l];
+
+			glGetProgramInfoLog(id, l, &l, message);
+
+			errorFunc(message, userDefinedData);
+
+			delete[] message;
+		}
+
+		glValidateProgram(id);
+	}
+
 	ShaderProgram createShaderProgram(const char *vertex, const char *fragment)
 	{
 		ShaderProgram shader = {0};
@@ -315,30 +382,75 @@ namespace gl2d
 		glDeleteShader(vertexId);
 		glDeleteShader(fragmentId);
 
-		int info = 0;
-		glGetProgramiv(shader.id, GL_LINK_STATUS, &info);
-
-		if (info != GL_TRUE)
-		{
-			char *message = 0;
-			int   l = 0;
-
-			glGetProgramiv(shader.id, GL_INFO_LOG_LENGTH, &l);
-
-			message = new char[l];
-
-			glGetProgramInfoLog(shader.id, l, &l, message);
-
-			errorFunc(message, userDefinedData);
-
-			delete[] message;
-		}
-
-		glValidateProgram(shader.id);
+		validateProgram(shader.id);
 
 		shader.u_sampler = glGetUniformLocation(shader.id, "u_sampler");
 
 		return shader;
+	}
+
+	ShaderProgram createShaderFromFile(const char *filePath)
+	{
+		std::ifstream fileFont(filePath, std::ios::binary);
+
+		if (!fileFont.is_open())
+		{
+			std::string e = "error openning: "; e += filePath;
+			errorFunc(e.c_str(), userDefinedData);
+			return {};
+		}
+
+		int fileSize = 0;
+		fileFont.seekg(0, std::ios::end);
+		fileSize = (int)fileFont.tellg();
+		fileFont.seekg(0, std::ios::beg);
+		char *fileData = new char[fileSize + 1]; //null terminated
+		fileFont.read((char *)fileData, fileSize);
+		fileFont.close();
+		fileData[fileSize] = 0; //null terminated
+
+		auto rez = createShader(fileData);
+
+		delete[] fileData;
+
+		return rez;
+	}
+
+	ShaderProgram createShader(const char *fragment)
+	{
+		return createShaderProgram(defaultVertexShader, fragment);
+	}
+
+	ShaderProgram createPostProcessShaderFromFile(const char *filePath)
+	{
+		std::ifstream fileFont(filePath, std::ios::binary);
+
+		if (!fileFont.is_open())
+		{
+			std::string e = "error openning: "; e += filePath;
+			errorFunc(e.c_str(), userDefinedData);
+			return {};
+		}
+
+		int fileSize = 0;
+		fileFont.seekg(0, std::ios::end);
+		fileSize = (int)fileFont.tellg();
+		fileFont.seekg(0, std::ios::beg);
+		char *fileData = new char[fileSize+1]; //null terminated
+		fileFont.read((char *)fileData, fileSize);
+		fileFont.close();
+		fileData[fileSize] = 0; //null terminated
+
+		auto rez = createPostProcessShader(fileData);
+
+		delete[] fileData;
+
+		return rez;
+	}
+
+	ShaderProgram createPostProcessShader(const char *fragment)
+	{
+		return createShaderProgram(defaultVertexPostProcessShader, fragment);
 	}
 
 #pragma endregion
@@ -471,6 +583,12 @@ namespace gl2d
 		delete[] fileData;
 	}
 
+	void Font::cleanup()
+	{
+		texture.cleanup();
+		*this = {};
+	}
+
 
 #pragma endregion
 
@@ -490,11 +608,15 @@ namespace gl2d
 		if (!hasInitialized)
 		{
 			errorFunc("Library not initialized. Have you forgotten to call gl2d::init() ?", userDefinedData);
+			renderer.clearDrawData();
+			return;
 		}
 
 		if (!renderer.vao)
 		{
 			errorFunc("Renderer not initialized. Have you forgotten to call gl2d::Renderer2D::create() ?", userDefinedData);
+			renderer.clearDrawData();
+			return;
 		}
 
 		if (renderer.windowH == 0 || renderer.windowW == 0)
@@ -503,6 +625,18 @@ namespace gl2d
 			{
 				renderer.clearDrawData();
 			}
+
+			return;
+		}
+
+		if (renderer.windowH < 0 || renderer.windowW < 0)
+		{
+			if (clearDrawData)
+			{
+				renderer.clearDrawData();
+			}
+
+			errorFunc("Negative windowW or windowH, have you forgotten to call updateWindowMetrics(w, h)?", userDefinedData);
 
 			return;
 		}
@@ -573,6 +707,7 @@ namespace gl2d
 		if (frameBuffer.fbo == 0) 
 		{
 			errorFunc("Framebuffer not initialized", userDefinedData);
+			return;
 		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer.fbo);
@@ -581,6 +716,187 @@ namespace gl2d
 		internalFlush(*this, clearDrawData);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFBO);
+	}
+
+	void Renderer2D::renderFrameBufferToTheEntireScreen(gl2d::FrameBuffer fbo, gl2d::FrameBuffer screen)
+	{
+		renderTextureToTheEntireScreen(fbo.texture, screen);
+	}
+
+	//doesn't bind or unbind stuff, except the vertex array,
+	//doesn't set the viewport
+	void renderQuadToScreenInternal(gl2d::Renderer2D &renderer)
+	{
+		static float positions[12] = {
+		-1, 1,
+		-1, -1,
+		1, 1,
+
+		1, 1,
+		-1, -1,
+		1, -1,};
+
+		//not used
+		static float colors[6 * 4] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,};
+		static float texCoords[12] = {
+			0, 1,
+			0, 0,
+			1, 1,
+
+			1, 1,
+			0, 0,
+			1, 0,
+		};
+
+
+		glBindVertexArray(renderer.vao);
+
+
+		glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[Renderer2DBufferType::quadPositions]);
+		glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(glm::vec2), positions, GL_STREAM_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[Renderer2DBufferType::quadColors]);
+		glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(glm::vec4), colors, GL_STREAM_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[Renderer2DBufferType::texturePositions]);
+		glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(glm::vec2), texCoords, GL_STREAM_DRAW);
+
+		{
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+	}
+
+	void Renderer2D::renderTextureToTheEntireScreen(gl2d::Texture t, gl2d::FrameBuffer screen)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, screen.fbo);
+
+		enableNecessaryGLFeatures();
+
+		if (!hasInitialized)
+		{
+			errorFunc("Library not initialized. Have you forgotten to call gl2d::init() ?", userDefinedData);
+			return;
+		}
+
+		if (!vao)
+		{
+			errorFunc("Renderer not initialized. Have you forgotten to call gl2d::Renderer2D::create() ?", userDefinedData);
+			return;
+		}
+
+		if (!currentShader.id)
+		{
+			errorFunc("Post Process Shader not created.", userDefinedData);
+			return;
+		}
+
+		glm::ivec2 size = {windowW, windowH};
+
+		if (screen.fbo) 
+		{
+			size = screen.texture.GetSize();
+		}
+		if (size.x == 0 || size.y == 0)
+		{
+			return;
+		}
+
+		glViewport(0, 0, size.x, size.y);
+
+		glUseProgram(currentShader.id);
+		glUniform1i(currentShader.u_sampler, 0);
+		t.bind();
+
+		renderQuadToScreenInternal(*this);
+
+		glBindVertexArray(0);
+
+	}
+
+	void Renderer2D::flushPostProcess(const std::vector<ShaderProgram> &postProcesses,
+		FrameBuffer frameBuffer, bool clearDrawData)
+	{
+
+		if (postProcesses.empty())
+		{
+			if (clearDrawData)
+			{
+				this->clearDrawData();
+				return;
+			}
+		}
+
+		if (!postProcessFbo1.fbo) { postProcessFbo1.create(0,0); }
+
+		postProcessFbo1.resize(windowW, windowH);
+		postProcessFbo1.clear();
+
+		flushFBO(postProcessFbo1, clearDrawData);
+
+		internalPostProcessFlip = 1;
+		postProcessOverATexture(postProcesses, postProcessFbo1.texture, frameBuffer);
+
+	}
+
+	void Renderer2D::postProcessOverATexture(const std::vector<ShaderProgram> &postProcesses, 
+		gl2d::Texture in,
+		FrameBuffer frameBuffer)
+	{
+		if (postProcesses.empty())
+			{return;}
+
+
+		if (!postProcessFbo1.fbo) { postProcessFbo1.create(0, 0); }
+		if (!postProcessFbo2.fbo && postProcesses.size() > 1)
+			{ postProcessFbo2.create(0, 0); }
+		
+		if (internalPostProcessFlip == 0) 
+		{
+			postProcessFbo1.resize(windowW, windowH);
+			postProcessFbo1.clear();
+			postProcessFbo2.resize(windowW, windowH);
+			postProcessFbo2.clear();
+		}
+		else if(postProcessFbo2.fbo)
+		{
+			//postProcessFbo1 has already been resized
+			postProcessFbo2.resize(windowW, windowH);
+			postProcessFbo2.clear();
+		}
+
+		for (int i = 0; i < postProcesses.size(); i++)
+		{
+			gl2d::FrameBuffer output;
+			gl2d::Texture input;
+
+			if (internalPostProcessFlip == 0)
+			{
+				input = postProcessFbo2.texture;
+				output = postProcessFbo1;
+			}
+			else
+			{
+				input = postProcessFbo1.texture;
+				output = postProcessFbo2;
+			}
+
+			if (i == 0)
+			{
+				input = in;
+			}
+
+			if (i == postProcesses.size() - 1)
+			{
+				output = frameBuffer;
+			}
+			output.clear();
+			
+			renderPostProcess(postProcesses[i], input, output);
+			internalPostProcessFlip = !internalPostProcessFlip;
+		}
+
+
+		internalPostProcessFlip = 0;
 	}
 
 	void enableNecessaryGLFeatures()
@@ -710,6 +1026,109 @@ namespace gl2d
 	{
 		renderRectangleAbsRotation(transforms, white1pxSquareTexture, colors, origin, rotation);
 	}
+
+	void Renderer2D::renderLine(const glm::vec2 position, const float angleDegrees, const float length, const Color4f color, const float width)
+	{
+		renderRectangle({position - glm::vec2(0,width / 2.f), length, width},
+			color, {-length/2, 0}, angleDegrees);
+	}
+
+	void Renderer2D::renderLine(const glm::vec2 start, const glm::vec2 end, const Color4f color, const float width) 
+	{
+		glm::vec2 vector = end - start;
+		float length = glm::length(vector);
+		float angle = std::atan2(vector.y, vector.x);
+		renderLine(start, -glm::degrees(angle), length, color, width);
+	}
+
+	void Renderer2D::renderRectangleOutline(const glm::vec4 position, const Color4f color, const float width,
+		const glm::vec2 origin, const float rotationDegrees)
+	{
+		
+		glm::vec2 topLeft = position;
+		glm::vec2 topRight = glm::vec2(position) + glm::vec2(position.z, 0);
+		glm::vec2 bottomLeft = glm::vec2(position) + glm::vec2(0, position.w);
+		glm::vec2 bottomRight = glm::vec2(position) + glm::vec2(position.z, position.w);
+		
+		glm::vec2 p1 = topLeft + glm::vec2(-width / 2.f, 0);
+		glm::vec2 p2 = topRight + glm::vec2(+width / 2.f, 0);
+		glm::vec2 p3 = topRight + glm::vec2(0, +width / 2.f);
+		glm::vec2 p4 = bottomRight + glm::vec2(0, -width / 2.f);
+		glm::vec2 p5 = bottomRight + glm::vec2(width / 2.f, 0);
+		glm::vec2 p6 = bottomLeft + glm::vec2(-width / 2.f, 0);
+		glm::vec2 p7 = bottomLeft + glm::vec2(0, -width / 2.f);
+		glm::vec2 p8 = topLeft + glm::vec2(0, +width / 2.f);
+
+		if (rotationDegrees != 0) 
+		{
+			glm::vec2 o = origin + glm::vec2(position.x, -position.y) + glm::vec2(position.z, -position.w) / 2.f;
+
+			p1 = rotateAroundPoint(p1, o, -rotationDegrees);
+			p2 = rotateAroundPoint(p2, o, -rotationDegrees);
+			p3 = rotateAroundPoint(p3, o, -rotationDegrees);
+			p4 = rotateAroundPoint(p4, o, -rotationDegrees);
+			p5 = rotateAroundPoint(p5, o, -rotationDegrees);
+			p6 = rotateAroundPoint(p6, o, -rotationDegrees);
+			p7 = rotateAroundPoint(p7, o, -rotationDegrees);
+			p8 = rotateAroundPoint(p8, o, -rotationDegrees);
+		}
+
+		auto renderPoint = [&](glm::vec2 pos) 
+		{
+			renderRectangle({pos - glm::vec2(1,1),2,2}, Colors_Black);
+		};
+
+		renderPoint(p1);
+		renderPoint(p2);
+		renderPoint(p3);
+		renderPoint(p4);
+		renderPoint(p5);
+		renderPoint(p6);
+		renderPoint(p7);
+		renderPoint(p8);
+
+		//add a padding so the lines align properly.
+		renderLine(p1, p2, color, width); //top line
+		renderLine(p3, p4, color, width);
+		renderLine(p5, p6, color, width); //bottom line
+		renderLine(p7, p8, color, width);
+
+	}
+
+	void  Renderer2D::renderCircleOutline(const glm::vec2 position, const Color4f color, const float size, const float width, const unsigned int segments)
+	{
+	
+		auto calcPos = [&](int p)
+		{
+			glm::vec2 circle = {size,0};
+
+			float a = 3.1415926 * 2 * ((float)p / segments);
+
+			float c = std::cos(a);
+			float s = std::sin(a);
+
+			circle = {c * circle.x - s * circle.y, s * circle.x + c * circle.y};
+
+			return circle + position;
+		};
+
+		
+		glm::vec2 lastPos = calcPos(1);
+		renderLine(calcPos(0), lastPos, color, width);
+		for (int i = 1; i < segments; i++)
+		{
+
+			glm::vec2 pos1 = lastPos;
+			glm::vec2 pos2 = calcPos(i + 1);
+
+			renderLine(pos1, pos2, color, width);
+
+			lastPos = pos2;
+		}
+
+	}
+
+
 
 	void Renderer2D::render9Patch(const Rect position, const int borderSize, const Color4f color, const glm::vec2 origin, const float rotation, const Texture texture, const Texture_Coords textureCoords, const Texture_Coords inner_texture_coords)
 	{
@@ -1043,6 +1462,10 @@ namespace gl2d
 	{
 		glDeleteVertexArrays(1, &vao);
 		glDeleteBuffers(Renderer2DBufferType::bufferSize, buffers);
+
+		postProcessFbo1.cleanup();
+		postProcessFbo2.cleanup();
+		internalPostProcessFlip = 0;
 	}
 
 	void Renderer2D::pushShader(ShaderProgram s)
@@ -1228,8 +1651,195 @@ namespace gl2d
 
 	}
 
+	float Renderer2D::determineTextRescaleFitSmaller(const std::string &str,
+		gl2d::Font &f, glm::vec4 transform, float maxSize)
+	{
+		auto s = getTextSize(str.c_str(), f, maxSize);
+
+		float ratioX = transform.z / s.x;
+		float ratioY = transform.w / s.y;
+
+
+		if (ratioX > 1 && ratioY > 1)
+		{
+			return maxSize;
+		}
+		else
+		{
+			if (ratioX < ratioY)
+			{
+				return maxSize*ratioX;
+			}
+			else
+			{
+				return maxSize * ratioY;
+			}
+		}
+	}
+
+
+	float Renderer2D::determineTextRescaleFitBigger(const std::string &str,
+		gl2d::Font &f, glm::vec4 transform, float minSize)
+	{
+		auto s = getTextSize(str.c_str(), f, minSize);
+
+		float ratioX = transform.z / s.x;
+		float ratioY = transform.w / s.y;
+
+
+		if (ratioX > 1 && ratioY > 1)
+		{
+			if (ratioX > ratioY)
+			{
+				return minSize * ratioY;
+			}
+			else
+			{
+				return minSize * ratioX;
+			}
+		}
+		else
+		{
+			
+		}
+
+		return minSize;
+	
+	}
+
+	float Renderer2D::determineTextRescaleFit(const std::string &str,
+		gl2d::Font &f, glm::vec4 transform)
+	{
+		float ret = 1;
+
+		auto s = getTextSize(str.c_str(), f, ret);
+
+		float ratioX = transform.z / s.x;
+		float ratioY = transform.w / s.y;
+
+
+		if (ratioX > 1 && ratioY > 1)
+		{
+			if (ratioX > ratioY)
+			{
+				return ret * ratioY;
+			}
+			else
+			{
+				return ret * ratioX;
+			}
+		}
+		else
+		{
+			if (ratioX < ratioY)
+			{
+				return ret * ratioX;
+			}
+			else
+			{
+				return ret * ratioY;
+			}
+		}
+
+		return ret;
+	}
+
+	int  Renderer2D::wrap(const std::string &in, gl2d::Font &f,
+		float baseSize, float maxDimension, std::string *outRez)
+	{
+		if (outRez)
+		{
+			*outRez = "";
+			outRez->reserve(in.size() + 10);
+		}
+
+		std::string word = "";
+		std::string currentLine = "";
+		currentLine.reserve(in.size() + 10);
+
+		bool wrap = 0;
+		bool newLine = 1;
+		int newLineCounter = 0;
+
+		for (int i = 0; i < in.size(); i++)
+		{
+			word.push_back(in[i]);
+			currentLine.push_back(in[i]);
+
+			if (in[i] == ' ')
+			{
+				if (wrap)
+				{
+					if (outRez)
+					{
+						outRez->push_back('\n'); currentLine = "";
+					}
+					newLineCounter++;
+
+				}
+
+				if (outRez)
+				{
+					*outRez += word;
+				}
+				word = "";
+				wrap = 0;
+				newLine = false;
+			}
+			else if (in[i] == '\n')
+			{
+				if (wrap)
+				{
+					if (outRez)
+					{
+						outRez->push_back('\n');
+					}
+					newLineCounter++;
+				}
+
+				currentLine = "";
+
+				if (outRez)
+				{
+					*outRez += word;
+				}
+				word = "";
+				wrap = 0;
+				newLine = true;
+			}
+			else
+			{
+				//let's check, only if needed
+				if (!wrap && !newLine)
+				{
+					float size = baseSize;
+					auto textSize = getTextSize(currentLine.c_str(), f, size);
+
+					if (textSize.x >= maxDimension && !newLine)
+					{
+						//wrap last word
+						wrap = 1;
+					}
+				};
+			}
+
+		}
+
+		{
+			if (wrap) { if (outRez)outRez->push_back('\n'); newLineCounter++; }
+
+			if (outRez)
+			{
+				*outRez += word;
+			}
+		}
+
+		return newLineCounter + 1;
+	}
+
 	void Renderer2D::renderText(glm::vec2 position, const char *text, const Font font,
-		const Color4f color, const float size, const float spacing, const float line_space, bool showInCenter,
+		const Color4f color, const float size, const float spacing, 
+		const float line_space, bool showInCenter,
 		const Color4f ShadowColor
 		, const Color4f LightColor
 	)
@@ -1246,6 +1856,15 @@ namespace gl2d
 		float linePositionY = position.y;
 
 		if (showInCenter)
+		{
+			auto textSize = this->getTextSize(text, font, size, spacing, line_space);
+
+			position.x -= textSize.x/2.f;
+			position.y += textSize.y/2.f;
+		}
+
+
+		if (0)
 		{
 			//This is the y position we render at because it advances when we encounter newlines
 
@@ -1378,6 +1997,29 @@ namespace gl2d
 		}
 	}
 
+	void Renderer2D::renderTextWrapped(const std::string &text,
+		gl2d::Font f, glm::vec4 textPos, glm::vec4 color, float baseSize,
+		float spacing, float lineSpacing,
+		bool showInCenter, glm::vec4 shadowColor, glm::vec4 lightColor)
+	{
+		std::string newText;
+		wrap(text, f, baseSize, textPos.z, &newText);
+		renderText(textPos,
+			newText.c_str(), f, color, baseSize, spacing, lineSpacing, showInCenter,
+			shadowColor, lightColor);
+	}
+
+	glm::vec2 Renderer2D::getTextSizeWrapped(const std::string &text,
+		gl2d::Font f, float maxTextLenght, float baseSize, float spacing, float lineSpacing)
+	{
+		std::string newText;
+		wrap(text, f, baseSize, maxTextLenght, &newText);
+		auto rez = getTextSize(
+			newText.c_str(), f, baseSize, spacing, lineSpacing);
+
+		return rez;
+	}
+
 	void Renderer2D::clearScreen(const Color4f color)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFBO);
@@ -1409,6 +2051,52 @@ namespace gl2d
 	{
 		currentCamera = defaultCamera;
 		currentShader = defaultShader;
+	}
+
+	void Renderer2D::renderPostProcess(ShaderProgram shader, 
+		Texture input, FrameBuffer result)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, result.fbo);
+
+		enableNecessaryGLFeatures();
+
+		if (!hasInitialized)
+		{
+			errorFunc("Library not initialized. Have you forgotten to call gl2d::init() ?", userDefinedData);
+			return;
+		}
+
+		if (!vao)
+		{
+			errorFunc("Renderer not initialized. Have you forgotten to call gl2d::Renderer2D::create() ?", userDefinedData);
+			return;
+		}
+
+		if (!shader.id)
+		{
+			errorFunc("Post Process Shader not created.", userDefinedData);
+			return;
+		}
+
+		auto size = input.GetSize();
+
+		if (size.x == 0 || size.y == 0)
+		{
+			return;
+		}
+
+		glViewport(0, 0, size.x, size.y);
+
+		glUseProgram(shader.id);
+		glUniform1i(shader.u_sampler, 0);
+
+		input.bind();
+
+		renderQuadToScreenInternal(*this);
+
+		glBindVertexArray(0);
+
+	
 	}
 
 #pragma endregion
@@ -1702,6 +2390,54 @@ namespace gl2d
 
 	}
 
+	size_t Texture::getMemorySize(int mipLevel, glm::ivec2 *outSize)
+	{
+		glBindTexture(GL_TEXTURE_2D, id);
+
+		glm::ivec2 stub = {};
+
+		if (!outSize)
+		{
+			outSize = &stub;
+		}
+
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, mipLevel, GL_TEXTURE_WIDTH, &outSize->x);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, mipLevel, GL_TEXTURE_HEIGHT, &outSize->y);
+		
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		return outSize->x * outSize->y * 4;
+	}
+
+	void Texture::readTextureData(void *buffer, int mipLevel)
+	{
+		glBindTexture(GL_TEXTURE_2D, id);
+		glGetTexImage(GL_TEXTURE_2D, mipLevel, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	}
+
+	std::vector<unsigned char> Texture::readTextureData(int mipLevel, glm::ivec2 *outSize)
+	{
+		glBindTexture(GL_TEXTURE_2D, id);
+
+		glm::ivec2 stub = {};
+
+		if (!outSize)
+		{
+			outSize = &stub;
+		}
+
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, mipLevel, GL_TEXTURE_WIDTH, &outSize->x);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, mipLevel, GL_TEXTURE_HEIGHT, &outSize->y);
+
+		std::vector<unsigned char> data;
+		data.resize(outSize->x * outSize->y * 4);
+		glGetTexImage(GL_TEXTURE_2D, mipLevel, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		return data;
+	}
+
 	void Texture::bind(const unsigned int sample)
 	{
 		glActiveTexture(GL_TEXTURE0 + sample);
@@ -1716,6 +2452,7 @@ namespace gl2d
 	void Texture::cleanup()
 	{
 		glDeleteTextures(1, &id);
+		*this = {};
 	}
 
 	//glm::mat3 Camera::getMatrix()
@@ -1757,7 +2494,7 @@ namespace gl2d
 			{
 				len = max;
 				position = pos - (max * delta);
-				position += delta * speed;
+				//osition += delta * speed;
 			}
 			else
 			{
@@ -1771,7 +2508,7 @@ namespace gl2d
 			bool signY2 = delta.y >= 0;
 			if (signX2 != signX || signY2 != signY || glm::length(delta2) > len)
 			{
-				position = pos;
+				//position = pos;
 			}
 		}
 	}
