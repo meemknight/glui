@@ -9,7 +9,7 @@
 // 1.0.1 added Frames and boxes
 //
 // 1.0.2 various stiling improvements and text
-// input improvements
+// input improvements, and toggle button
 // 
 // 
 //////////////////////////////////////////////////
@@ -83,6 +83,18 @@ namespace glui
 			gl2d::Texture ballTexture = {}, gl2d::Color4f color = {0,0,0,0}
 			,gl2d::Color4f color2 = {0,0,0,0});
 
+		//sepparate options by |
+		void toggleOptions(std::string name,
+			std::string optionsSeparatedByBars,
+			std::size_t *currentIndex,
+			bool showText = true,
+			gl2d::Color4f textColor = {1,1,1,1},
+			gl2d::Color4f *optionsColors = nullptr,
+			gl2d::Texture texture = {},
+			gl2d::Color4f textureColor = {1,1,1,1},
+			std::string toolTip = ""
+		);
+
 		void newColum(int id);
 
 		void PushId(int id);
@@ -110,6 +122,9 @@ namespace glui
 
 			struct Widget
 			{
+				std::string text2;
+				std::string text3;
+
 				int type = 0;
 				bool justCreated = true;
 				bool enabeled = true;
@@ -126,6 +141,7 @@ namespace glui
 				bool returnFromUpdate = 0;
 				bool customWidgetUsed = 0;
 				void *pointer = 0;
+				void *pointer2 = 0;
 				bool clicked = 0; //todo for all?
 				bool hovered = 0;
 				float min = 0;

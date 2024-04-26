@@ -129,7 +129,6 @@ void render2()
 {
 	ui.Begin(100);
 
-
 	
 		ui.SetAlignModeFixedSizeWidgets({0, 100});
 
@@ -169,6 +168,18 @@ void render2()
 
 		static char text2[20] = {};
 		ui.InputText("Test2: ", text2, sizeof(text2), Colors_White, texture);
+
+		static size_t index = 0;
+		static glm::vec4 colors[] = {
+			Colors_Green,
+			Colors_Yellow,
+			Colors_Red,
+		};
+
+		ui.toggleOptions("fruit: ", "apple|banana|cherry", &index, true, Colors_White, 
+			colors, 
+			texture, Colors_Gray,
+			"This is a toggle button\nPress it to select options\n\n-Apple\n-Banana\nCherry yum!");
 
 	ui.newColum(1);
 

@@ -51,6 +51,7 @@ namespace glui
 		newColumW,
 		sliderIntW,
 		customWidget,
+		optionsToggle,
 	};
 
 	
@@ -287,18 +288,29 @@ namespace glui
 	}
 
 	//todo reuse the upper function
-	void renderText(gl2d::Renderer2D& renderer,const std::string &str, gl2d::Font& f, glm::vec4 transform, glm::vec4 color, 
-		bool noTexture, bool minimize = true)
+	void renderText(gl2d::Renderer2D& renderer,const std::string &str,
+		gl2d::Font& f, glm::vec4 transform, glm::vec4 color, 
+		bool noTexture, bool minimize = true, bool alignLeft = false)
 	{
 		auto newStr = getString(str);
 		auto newS = determineTextSize(renderer, newStr, f, transform, minimize);
 
 		glm::vec2 pos = glm::vec2(transform);
 		
-		pos.x += transform.z / 2.f;
-		pos.y += transform.w / 3.f;
+		if (!alignLeft)
+		{
+			pos.x += transform.z / 2.f;
+			pos.y += transform.w / 3.f;
+			renderer.renderText(pos, newStr.c_str(), f, color, newS);
+		}
+		else
+		{
+			//pos.x += transform.z * 0.02;
+			pos.y += transform.w * 0.4;
+			renderer.renderText(pos, newStr.c_str(), f, color, newS, 4, 3, false);
+		}
 
-		renderer.renderText(pos, newStr.c_str(), f, color, newS);
+		
 	}
 
 	glm::vec4 computeTextureNewPosition(glm::vec4 transform, gl2d::Texture t)
@@ -803,7 +815,7 @@ namespace glui
 
 					renderFancyBox(renderer, transformDrawn, widget.colors, widget.texture, hovered, clicked);
 
-					if ((widget.colors.a <= 0.01f || i.second.texture.id == 0))
+					if ((widget.colors.a <= 0.01f || j.second.texture.id == 0))
 					{
 						renderText(renderer, j.first, font, transformDrawn, textColor, true, !hovered);
 					}
@@ -1275,6 +1287,176 @@ namespace glui
 						break;
 					}
 
+					case widgetType::optionsToggle:
+					{
+
+						auto transformDrawn = colums[currentColum].first;
+						auto aabbTransform = colums[currentColum].first;
+						bool hovered = 0;
+						bool clicked = 0;
+						auto textColor = j.second.colors;
+
+						size_t *index = (size_t*)j.second.pointer;
+
+						size_t stub = 0;
+						if (!index) { index = &stub; errorFunc("Error, nullptr passed as an index for toggleOptions!"); }
+
+						if (widget.colors.a <= 0.01f)
+						{
+							auto p = determineTextPos(renderer, j.first, font, transformDrawn, true);
+							aabbTransform = p;
+						}
+
+						int maxSize = 1;
+						for (int i = 0; i < j.second.text2.size(); i++)
+						{
+							char c = j.second.text2[i];
+							if (c == '|')
+							{
+								maxSize++;
+							}
+						}
+
+						if (j.second.text2.empty()) { maxSize = 0; }
+
+						if (*index > maxSize - 1)
+						{
+							*index = 0;
+						}
+
+						if (j.second.pointer2)
+						{
+							textColor = ((glm::vec4 *)j.second.pointer2)[*index];
+						}
+
+						if (aabb(aabbTransform, input.mousePos))
+						{
+							hovered = true;
+							if (input.mouseHeld)
+							{
+								clicked = true;
+								transformDrawn.y += transformDrawn.w * pressDownSize;
+							}
+						}
+
+						if (hovered && widget.colors.a <= 0.01f)
+						{
+							textColor = stepColorDown(textColor, 0.8);
+						}
+
+						if (input.mouseReleased && aabb(aabbTransform, input.mousePos))
+						{
+							widget.returnFromUpdate = true;
+							(*index)++;
+						}
+						else
+						{
+							widget.returnFromUpdate = false;
+						}
+
+						
+						renderFancyBox(renderer, transformDrawn,
+							widget.colors2, widget.texture, hovered, clicked);
+
+						std::string finalText;
+
+						if (j.second.displayText)
+						{
+							finalText = j.first;
+						}
+
+						int currentIncrement = 0;
+						for (int i = 0; i < j.second.text2.size(); i++)
+						{
+							if (currentIncrement == *index)
+							{
+
+								char c = j.second.text2[i];
+								if (c == '|')
+								{
+									break;
+								}
+								finalText += c;
+							}
+
+							char c = j.second.text2[i];
+							if (c == '|')
+							{
+								currentIncrement++;
+							}
+						}
+
+						if ((widget.colors.a <= 0.01f || j.second.texture.id == 0))
+						{
+							renderText(renderer, finalText, font,
+								transformDrawn, textColor, true, !hovered);
+						}
+						else
+						{
+							renderText(renderer, finalText,
+								font, transformDrawn, textColor, false, !hovered);
+						}
+
+						if (!j.second.text3.empty() && hovered)
+						{
+							glm::vec4 transform = transformDrawn;
+							transform.x += transform.z * 0.1;
+							transform.y += transform.w * 1.1f;
+
+							int lines = 1;
+							for (auto &c : j.second.text3)
+							{
+								if (c == '\n' || c == '\v')
+								{
+									lines++;
+								}
+							}
+
+							transform.w *= lines;
+
+							renderFancyBox(renderer, transform,
+								stepColorDown(widget.colors2, 0.8)
+								, widget.texture, 0, 0);
+
+							transform.x += transform.z * 0.1f;
+							transform.y += transform.w * 0.1f;
+							transform.z *= 0.9f;
+							transform.w *= 0.9f;
+
+							transform.w /= lines;
+
+							int ind = 0;
+							std::string copy = "";
+							for (int l = 1; l <= lines;)
+							{
+								if (j.second.text3[ind] == '\n' ||
+									j.second.text3[ind] == '\v'
+									)
+								{
+									renderText(renderer,copy,
+										font, transform, j.second.colors, 0, true, true);
+									l++;
+									copy = "";
+									transform.y += transform.w;
+								}
+								else
+								{
+									copy += j.second.text3[ind];
+								}
+
+								ind++;
+
+								if (ind >= j.second.text3.size())break;
+							}
+
+							renderText(renderer, copy,
+								font, transform, j.second.colors, 0, true, true);
+						}
+
+
+						break;
+					}
+
 				}
 
 				widget.justCreated = false;
@@ -1555,6 +1737,35 @@ namespace glui
 		internal.widgetsVector.push_back({name, widget});
 
 	}
+
+	void RendererUi::toggleOptions(std::string name,
+		std::string optionsSeparatedByBars,
+		std::size_t *currentIndex,
+		bool showText,
+		gl2d::Color4f textColor,
+		gl2d::Color4f *optionsColors,
+		gl2d::Texture texture,
+		gl2d::Color4f textureColor,
+		std::string toolTip
+	)
+	{
+
+		Internal::Widget widget = {};
+		widget.type = widgetType::optionsToggle;
+		widget.text2 = optionsSeparatedByBars;
+		widget.pointer = currentIndex;
+		widget.displayText = showText;
+		widget.colors = textColor;
+		widget.texture = texture;
+		widget.colors2 = textureColor;
+		widget.pointer2 = optionsColors;
+		widget.text3 = toolTip;
+
+		internal.widgetsVector.push_back({name, widget});
+
+
+	}
+
 
 	void RendererUi::newColum(int id)
 	{
