@@ -169,7 +169,7 @@ void render2()
 		static char text2[20] = {};
 		ui.InputText("Test2: ", text2, sizeof(text2), Colors_White, texture);
 
-		static size_t index = 0;
+		static int index = 0;
 		static glm::vec4 colors[] = {
 			Colors_Green,
 			Colors_Yellow,
@@ -251,7 +251,7 @@ bool gameLogic(float deltaTime)
 
 	ui.renderFrame(renderer, font, platform::getRelMousePosition(),
 		platform::isLMousePressed(), platform::isLMouseHeld(), platform::isLMouseReleased(),
-		platform::isKeyReleased(platform::Button::Escape), platform::getTypedInput(), deltaTime);
+		platform::isKeyReleased(platform::Button::Escape), platform::getTypedInput(), deltaTime, 0);
 
 	renderer.flush();
 
