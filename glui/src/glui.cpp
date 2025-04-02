@@ -313,6 +313,7 @@ namespace glui
 		{
 			//pos.x += transform.z * 0.02;
 			//pos.y += transform.w * 0.4;
+			pos.y += transform.w / 2.f;
 			renderer.renderText(pos, newStr.c_str(), f, color, newS, 4, 3, false);
 		}
 
