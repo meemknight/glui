@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////
-//gl2d.h				1.0.2
+//gl2d.h				1.0.3
 //Copyright(c) 2023 Luta Vlad
 //https://github.com/meemknight/glui
 //////////////////////////////////////////////////
@@ -85,7 +85,7 @@ namespace glui
 	constexpr float pressDownSize = 0.04f;
 	constexpr float shadowSize = 0.1f;
 	constexpr float outlineSize = 0.02f;
-	constexpr float textFit = 1.2f;
+	constexpr float textFit = 64.f;
 
 	constexpr float nonMinimizeTextSize = 0.9f;
 	constexpr float minimizeRatio = 0.8f;
