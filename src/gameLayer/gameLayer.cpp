@@ -179,7 +179,7 @@ void render2()
 		ui.toggleOptions("fruit: ", "apple|banana|cherry", &index, true, Colors_White, 
 			colors, 
 			texture, Colors_Gray,
-			"This is a toggle button\nPress it to select options\n\n-Apple\n-Banana\nCherry yum!");
+			"This is a toggle button\nPress it to select options\n\n-Apple\n-Banana\n-Cherry yum!");
 
 	ui.newColum(1);
 
