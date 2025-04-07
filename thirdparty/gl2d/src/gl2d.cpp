@@ -517,6 +517,8 @@ or gladLoadGLLoader() or glewInit()?", userDefinedData);
 		float scale = stbtt_ScaleForPixelHeight(&fontInfo, 64); // Match font size used in PackFontRange
 		max_height = (ascent - descent + lineGap) * scale;
 
+
+
 		// STB TrueType will give us a one channel buffer of the font that we then convert to RGBA for OpenGL
 		const size_t fontMonochromeBufferSize = size.x * size.y;
 		const size_t fontRgbaBufferSize = size.x * size.y * 4;
@@ -561,6 +563,15 @@ or gladLoadGLLoader() or glewInit()?", userDefinedData);
 		//			max_height = charWidth;
 		//	}
 		//}
+
+		if (monospaced)
+		{
+			spaceSize = max_height;
+		}
+		else
+		{
+			spaceSize = packedCharsBuffer[' ' - ' '].xadvance;
+		}
 
 
 		delete[] fontMonochromeBuffer;
@@ -1634,8 +1645,10 @@ or gladLoadGLLoader() or glewInit()?", userDefinedData);
 			}
 			else if (text[i] == ' ')
 			{
-				float x = font.max_height;
-				rectangle.x += x * size + spacing * size;
+				rectangle.x += (font.spaceSize + spacing) * size;
+
+				//float x = font.max_height;
+				//rectangle.x += x * size + spacing * size;
 			}
 			else if (text[i] >= ' ' && text[i] <= '~')
 			{
@@ -1680,7 +1693,7 @@ or gladLoadGLLoader() or glewInit()?", userDefinedData);
 		paddY += font.max_height * size + bonusY;
 
 		//paddY = ((lineCount-1) * font.max_height + (lineCount - 1) * line_space + firstLineSize) * size;
-		paddY = ((lineCount) * font.max_height + (lineCount - 1) * line_space) * size;
+		paddY = ((lineCount)*font.max_height + (lineCount - 1) * line_space) * size;
 
 		return glm::vec2{paddX, paddY};
 
@@ -1921,8 +1934,10 @@ or gladLoadGLLoader() or glewInit()?", userDefinedData);
 			}
 			else if (text[i] == ' ')
 			{
-				float x = font.max_height;
-				rectangle.x += x * size + spacing * size;
+				rectangle.x += (font.spaceSize + spacing) * size;
+
+				//float x = font.max_height;
+				//rectangle.x += x * size + spacing * size;
 			}
 			else if (text[i] >= ' ' && text[i] <= '~')
 			{
